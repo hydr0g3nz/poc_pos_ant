@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Custom Ant Design overrides */
+.ant-card-hoverable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.ant-btn-primary {
+  background-color: #ff6b35;
+  border-color: #ff6b35;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: #ff5722;
+  border-color: #ff5722;
+}
+
+/* Loading animation */
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Custom card styles */
+.status-card {
+  border-left: 4px solid;
+  border-radius: 8px !important;
+}
+
+.status-card.pending {
+  border-left-color: #faad14;
+}
+
+.status-card.preparing {
+  border-left-color: #fa8c16;
+}
+
+.status-card.ready {
+  border-left-color: #52c41a;
+}
+
+.status-card.served {
+  border-left-color: #1890ff;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .ant-table-container {
+    overflow-x: auto;
+  }
+  
+  .mobile-hidden {
+    display: none;
+  }
+}
+
+/* Kitchen display specific styles */
+.kitchen-item-card {
+  transition: all 0.3s ease;
+}
+
+.kitchen-item-card.ready {
+  animation: highlight 2s infinite;
+}
+
+@keyframes highlight {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(82, 196, 26, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(82, 196, 26, 0.6);
+  }
+}
+
+/* Custom notification styles */
+.ant-notification-notice {
+  border-radius: 8px;
+}

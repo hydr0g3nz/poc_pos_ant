@@ -1,9 +1,25 @@
 import api from './api';
-import { ApiResponse, MenuItem, Category, Order, Table } from '@/types';
+import {
+  ApiResponse,
+  Category,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+  MenuItem,
+  MenuItemListResponse,
+  CreateMenuItemRequest,
+  UpdateMenuItemRequest,
+  Order,
+  OrderListResponse,
+  OrderWithItemsListResponse,
+  Table,
+  CreateTableRequest,
+  UpdateTableRequest,
+  PaymentListResponse
+} from '@/types';
 
 export const adminService = {
   // Category APIs
-  createCategory: async (data: { name: string }): Promise<ApiResponse<Category>> => {
+  createCategory: async (data: CreateCategoryRequest): Promise<ApiResponse<Category>> => {
     const response = await api.post('/categories', data);
     return response.data;
   },
@@ -13,7 +29,17 @@ export const adminService = {
     return response.data;
   },
 
-  updateCategory: async (id: number, data: { name: string }): Promise<ApiResponse<Category>> => {
+  getCategory: async (id: number): Promise<ApiResponse<Category>> => {
+    const response = await api.get(`/categories/${id}`);
+    return response.data;
+  },
+
+  getCategoryByName: async (name: string): Promise<ApiResponse<Category>> => {
+    const response = await api.get(`/categories/search?name=${encodeURIComponent(name)}`);
+    return response.data;
+  },
+
+  updateCategory: async (id: number, data: UpdateCategoryRequest): Promise<ApiResponse<Category>> => {
     const response = await api.put(`/categories/${id}`, data);
     return response.data;
   },
@@ -24,12 +50,12 @@ export const adminService = {
   },
 
   // Menu Item APIs
-  createMenuItem: async (data: any): Promise<ApiResponse<MenuItem>> => {
+  createMenuItem: async (data: CreateMenuItemRequest): Promise<ApiResponse<MenuItem>> => {
     const response = await api.post('/menu-items', data);
     return response.data;
   },
 
-  getMenuItems: async (limit = 10, offset = 0): Promise<ApiResponse<any>> => {
+  getMenuItems: async (limit = 10, offset = 0): Promise<ApiResponse<MenuItemListResponse>> => {
     const response = await api.get(`/menu-items?limit=${limit}&offset=${offset}`);
     return response.data;
   },
@@ -39,7 +65,25 @@ export const adminService = {
     return response.data;
   },
 
-  updateMenuItem: async (id: number, data: any): Promise<ApiResponse<MenuItem>> => {
+  getMenuItemsByCategory: async (
+    categoryId: number,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<MenuItemListResponse>> => {
+    const response = await api.get(`/menu-items/category/${categoryId}?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  searchMenuItems: async (
+    query: string,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<MenuItemListResponse>> => {
+    const response = await api.get(`/menu-items/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  updateMenuItem: async (id: number, data: UpdateMenuItemRequest): Promise<ApiResponse<MenuItem>> => {
     const response = await api.put(`/menu-items/${id}`, data);
     return response.data;
   },
@@ -50,8 +94,18 @@ export const adminService = {
   },
 
   // Order APIs
-  getOrders: async (limit = 10, offset = 0): Promise<ApiResponse<any>> => {
+  getOrders: async (limit = 10, offset = 0): Promise<ApiResponse<OrderListResponse>> => {
     const response = await api.get(`/orders?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  getOrdersWithItems: async (limit = 10, offset = 0): Promise<ApiResponse<OrderWithItemsListResponse>> => {
+    const response = await api.get(`/orders/items?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  getOrder: async (id: number): Promise<ApiResponse<Order>> => {
+    const response = await api.get(`/orders/${id}`);
     return response.data;
   },
 
@@ -60,8 +114,34 @@ export const adminService = {
     return response.data;
   },
 
-  updateOrderStatus: async (id: number, status: string): Promise<ApiResponse<Order>> => {
-    const response = await api.put(`/orders/${id}`, { status });
+  updateOrderStatus: async (id: number, data: { status: string }): Promise<ApiResponse<Order>> => {
+    const response = await api.put(`/orders/${id}`, data);
+    return response.data;
+  },
+
+  closeOrder: async (id: number): Promise<ApiResponse<Order>> => {
+    const response = await api.put(`/orders/${id}/close`);
+    return response.data;
+  },
+
+  getOrdersByStatus: async (
+    status: string,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<OrderListResponse>> => {
+    const response = await api.get(`/orders/search?status=${status}&limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  getOrdersByDateRange: async (
+    startDate: string,
+    endDate: string,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<OrderListResponse>> => {
+    const response = await api.get(
+      `/orders/date-range?start_date=${startDate}&end_date=${endDate}&limit=${limit}&offset=${offset}`
+    );
     return response.data;
   },
 
@@ -81,18 +161,60 @@ export const adminService = {
     return response.data;
   },
 
-  createTable: async (data: { table_number: number; seating: number }): Promise<ApiResponse<Table>> => {
+  createTable: async (data: CreateTableRequest): Promise<ApiResponse<Table>> => {
     const response = await api.post('/tables', data);
     return response.data;
   },
 
-  updateTable: async (id: number, data: { table_number: number; seating: number }): Promise<ApiResponse<Table>> => {
+  getTable: async (id: number): Promise<ApiResponse<Table>> => {
+    const response = await api.get(`/tables/${id}`);
+    return response.data;
+  },
+
+  getTableByNumber: async (number: number): Promise<ApiResponse<Table>> => {
+    const response = await api.get(`/tables/number/${number}`);
+    return response.data;
+  },
+
+  getTableByQRCode: async (qrCode: string): Promise<ApiResponse<Table>> => {
+    const response = await api.get(`/tables/qr?qr_code=${encodeURIComponent(qrCode)}`);
+    return response.data;
+  },
+
+  updateTable: async (id: number, data: UpdateTableRequest): Promise<ApiResponse<Table>> => {
     const response = await api.put(`/tables/${id}`, data);
     return response.data;
   },
 
   deleteTable: async (id: number): Promise<ApiResponse<void>> => {
     const response = await api.delete(`/tables/${id}`);
+    return response.data;
+  },
+
+  // Payment APIs
+  getPayments: async (limit = 10, offset = 0): Promise<ApiResponse<PaymentListResponse>> => {
+    const response = await api.get(`/payments?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  getPaymentsByMethod: async (
+    method: string,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<PaymentListResponse>> => {
+    const response = await api.get(`/payments/search?method=${method}&limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  getPaymentsByDateRange: async (
+    startDate: string,
+    endDate: string,
+    limit = 10,
+    offset = 0
+  ): Promise<ApiResponse<PaymentListResponse>> => {
+    const response = await api.get(
+      `/payments/date-range?start_date=${startDate}&end_date=${endDate}&limit=${limit}&offset=${offset}`
+    );
     return response.data;
   },
 };

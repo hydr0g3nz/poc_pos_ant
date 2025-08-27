@@ -1,9 +1,19 @@
 import api from './api';
-import { ApiResponse, MenuItem, Category, Order, OrderItem } from '@/types';
+import {
+  ApiResponse,
+  MenuItem,
+  MenuItemListResponse,
+  Category,
+  OrderItem,
+  OrderDetailResponse,
+  OrderWithItemsListResponse,
+  AddOrderItemListRequest,
+  ManageOrderItemListRequest
+} from '@/types';
 
 export const customerService = {
   // Menu APIs
-  getMenuItems: async (limit = 10, page = 1): Promise<ApiResponse<any>> => {
+  getMenuItems: async (limit = 10, page = 1): Promise<ApiResponse<MenuItemListResponse>> => {
     const response = await api.get(`/customers/menu?limit=${limit}&page=${page}`);
     return response.data;
   },
@@ -13,8 +23,14 @@ export const customerService = {
     return response.data;
   },
 
-  searchMenuItems: async (query: string, limit = 10, page = 1): Promise<ApiResponse<any>> => {
-    const response = await api.get(`/customers/menu/search?q=${query}&limit=${limit}&page=${page}`);
+  searchMenuItems: async (
+    query: string,
+    limit = 10,
+    page = 1
+  ): Promise<ApiResponse<MenuItemListResponse>> => {
+    const response = await api.get(
+      `/customers/menu/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`
+    );
     return response.data;
   },
 
@@ -24,22 +40,31 @@ export const customerService = {
   },
 
   // Order APIs
-  manageOrderItems: async (orderData: any): Promise<ApiResponse<OrderItem[]>> => {
+  addOrderItems: async (orderData: AddOrderItemListRequest): Promise<ApiResponse<OrderItem[]>> => {
     const response = await api.post('/customers/orders/items', orderData);
     return response.data;
   },
 
-  getOrdersByStatus: async (status: string, limit = 10, page = 1): Promise<ApiResponse<any>> => {
+  manageOrderItems: async (orderData: ManageOrderItemListRequest): Promise<ApiResponse<OrderItem[]>> => {
+    const response = await api.post('/customers/orders/items', orderData);
+    return response.data;
+  },
+
+  getOrdersByStatus: async (
+    status: string,
+    limit = 10,
+    page = 1
+  ): Promise<ApiResponse<OrderWithItemsListResponse>> => {
     const response = await api.get(`/customers/orders/status?status=${status}&limit=${limit}&page=${page}`);
     return response.data;
   },
 
-  getOrders: async (limit = 10, page = 1): Promise<ApiResponse<any>> => {
+  getOrders: async (limit = 10, page = 1): Promise<ApiResponse<OrderWithItemsListResponse>> => {
     const response = await api.get(`/customers/orders?limit=${limit}&page=${page}`);
     return response.data;
   },
 
-  getOrderDetail: async (id: number): Promise<ApiResponse<Order>> => {
+  getOrderDetail: async (id: number): Promise<ApiResponse<OrderDetailResponse>> => {
     const response = await api.get(`/customers/orders/${id}`);
     return response.data;
   },

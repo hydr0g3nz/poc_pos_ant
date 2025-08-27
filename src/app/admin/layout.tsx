@@ -1,7 +1,15 @@
-'use client';
-
-import { Layout, Menu, Avatar, Dropdown, Button, Typography, Space } from 'antd';
-import { 
+"use client";
+import type { MenuProps } from "antd";
+import {
+  Layout,
+  Menu,
+  Avatar,
+  Dropdown,
+  Button,
+  Typography,
+  Space,
+} from "antd";
+import {
   DashboardOutlined,
   MenuOutlined,
   ShoppingCartOutlined,
@@ -10,11 +18,11 @@ import {
   SettingOutlined,
   LogoutOutlined,
   BellOutlined,
-  HomeOutlined
-} from '@ant-design/icons';
-import { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
+  HomeOutlined,
+} from "@ant-design/icons";
+import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -26,94 +34,94 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
 
   const menuItems = [
     {
-      key: '/admin',
+      key: "/admin",
       icon: <DashboardOutlined />,
-      label: 'แดชบอร์ด',
+      label: "แดชบอร์ด",
     },
     {
-      key: '/admin/menus',
+      key: "/admin/menus",
       icon: <MenuOutlined />,
-      label: 'จัดการเมนู',
+      label: "จัดการเมนู",
       children: [
         {
-          key: '/admin/menu',
-          label: 'รายการเมนู',
+          key: "/admin/menu",
+          label: "รายการเมนู",
         },
         {
-          key: '/admin/categories',
-          label: 'หมวดหมู่',
+          key: "/admin/categories",
+          label: "หมวดหมู่",
         },
         {
-          key: '/admin/kitchen-stations',
-          label: 'สถานีครัว',
+          key: "/admin/kitchen-stations",
+          label: "สถานีครัว",
         },
       ],
     },
     {
-      key: '/admin/orders',
+      key: "/admin/orders",
       icon: <ShoppingCartOutlined />,
-      label: 'จัดการออเดอร์',
+      label: "จัดการออเดอร์",
     },
     {
-      key: '/admin/tables',
+      key: "/admin/tables",
       icon: <TableOutlined />,
-      label: 'จัดการโต๊ะ',
+      label: "จัดการโต๊ะ",
     },
     {
-      key: '/admin/kitchen',
+      key: "/admin/kitchen",
       icon: <SettingOutlined />,
-      label: 'ครัว',
+      label: "ครัว",
     },
   ];
 
-  const userMenuItems = [
+  const userMenuItems: MenuProps["items"] = [
     {
-      key: 'profile',
+      key: "profile",
       icon: <UserOutlined />,
-      label: 'โปรไฟล์',
+      label: "โปรไฟล์",
     },
     {
-      key: 'settings',
+      key: "settings",
       icon: <SettingOutlined />,
-      label: 'ตั้งค่า',
+      label: "ตั้งค่า",
     },
     {
-      type: 'divider',
+      type: "divider",
     },
     {
-      key: 'logout',
+      key: "logout",
       icon: <LogoutOutlined />,
-      label: 'ออกจากระบบ',
+      label: "ออกจากระบบ",
       danger: true,
     },
   ];
 
   return (
     <Layout className="min-h-screen">
-      <Sider 
-        trigger={null} 
-        collapsible 
+      <Sider
+        trigger={null}
+        collapsible
         collapsed={collapsed}
         className="shadow-lg"
         theme="light"
       >
         <div className="p-4 text-center border-b">
           <Link href="/admin" className="text-xl font-bold text-orange-600">
-            {collapsed ? 'POS' : 'POS System'}
+            {collapsed ? "POS" : "POS System"}
           </Link>
         </div>
-        
+
         <Menu
           mode="inline"
           selectedKeys={[pathname]}
-          items={menuItems.map(item => ({
+          items={menuItems.map((item) => ({
             ...item,
             onClick: item.children ? undefined : () => router.push(item.key),
-            children: item.children?.map(child => ({
+            children: item.children?.map((child) => ({
               ...child,
               onClick: () => router.push(child.key),
             })),
@@ -133,7 +141,7 @@ export default function AdminLayout({
             <Button
               type="text"
               icon={<HomeOutlined />}
-              onClick={() => router.push('/')}
+              onClick={() => router.push("/")}
             >
               กลับหน้าหลัก
             </Button>
@@ -145,8 +153,8 @@ export default function AdminLayout({
               menu={{
                 items: userMenuItems,
                 onClick: ({ key }) => {
-                  if (key === 'logout') {
-                    router.push('/');
+                  if (key === "logout") {
+                    router.push("/");
                   }
                 },
               }}
@@ -160,9 +168,7 @@ export default function AdminLayout({
           </Space>
         </Header>
 
-        <Content className="bg-gray-50 p-6">
-          {children}
-        </Content>
+        <Content className="bg-gray-50 p-6">{children}</Content>
       </Layout>
     </Layout>
   );

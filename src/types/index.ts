@@ -213,13 +213,7 @@ export interface PaymentListResponse {
   offset: number;
 }
 
-// Menu Option Types
-export interface MenuOption {
-  id: number;
-  name: string;
-  type: string;
-  is_required: boolean;
-}
+
 
 export interface OptionValue {
   id: number;
@@ -296,4 +290,57 @@ export interface CreateKitchenStationRequest {
 export interface UpdateKitchenStationRequest {
   name: string;
   is_available: boolean;
+}
+
+export interface OptionValue {
+  id: number;
+  optionId: number;
+  name: string;
+  isDefault: boolean;
+  additionalPrice: string; // เปลี่ยนเป็น string ตาม API
+}
+
+export interface MenuOption {
+  id: number;
+  name: string;
+  type: 'single' | 'multiple';
+  isRequired: boolean;
+  optionValues: OptionValue[];
+}
+
+export interface MenuItemOption {
+  id: number;
+  optionId: number;
+  is_active: boolean;
+  option: MenuOption;
+}
+
+export interface MenuItem {
+  id: number;
+  category_id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  kitchen_station: string;
+  is_active: boolean;
+  is_recommended: boolean;
+  display_order: number;
+  menu_option: MenuItemOption[]; // แก้ไขให้ตรงกับ API
+}
+
+// เพิ่ม interface สำหรับการเลือก option
+export interface SelectedOption {
+  optionId: number;
+  valueId: number;
+  additionalPrice: number;
+}
+
+export interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  selectedOptions?: SelectedOption[];
+  notes?: string;
 }

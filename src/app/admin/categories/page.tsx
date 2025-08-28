@@ -13,6 +13,8 @@ import {
   Popconfirm,
   InputNumber,
   Switch,
+  TableColumnType,
+  Tag,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useState } from "react";
@@ -24,8 +26,8 @@ const { Title } = Typography;
 
 export default function CategoriesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<UpdateCategoryRequest | null>(null);
-  const [form] = Form.useForm<UpdateCategoryRequest>();
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [form] = Form.useForm<Category>();
 
   const { data: categories, isLoading } = useSWR("admin-categories", () =>
     adminService.getCategories()
@@ -37,7 +39,7 @@ export default function CategoriesPage() {
     setIsModalOpen(true);
   };
 
-const handleEdit = (category: UpdateCategoryRequest) => {
+const handleEdit = (category: Category) => {
   setEditingCategory(category);
   form.setFieldsValue(category); // ส่งทั้ง object
   setIsModalOpen(true);
@@ -58,6 +60,7 @@ const handleEdit = (category: UpdateCategoryRequest) => {
       const values: UpdateCategoryRequest = await form.validateFields();
 
       if (editingCategory) {
+        console.log(editingCategory.id);
         await adminService.updateCategory(editingCategory.id, values);
         message.success("แก้ไขหมวดหมู่สำเร็จ");
       } else {
@@ -72,7 +75,7 @@ const handleEdit = (category: UpdateCategoryRequest) => {
     }
   };
 
-  const columns = [
+  const columns:TableColumnType<Category>[] = [
     {
       title: "ID",
       dataIndex: "id",
@@ -85,10 +88,20 @@ const handleEdit = (category: UpdateCategoryRequest) => {
       key: "name",
     },
     {
-      title: "วันที่สร้าง",
-      dataIndex: "created_at",
-      key: "created_at",
-      render: (date: string) => moment(date).format("DD/MM/YYYY HH:mm"),
+      title: "คําอธิบาย",
+      dataIndex: "description",
+      key: "description",
+    },
+    {
+      title: "สถานะ",
+      dataIndex: "is_active",
+      key: "is_active",
+      render: (is_active: boolean) => (is_active ?<Tag color="green">ใช้งาน</Tag> : <Tag color="red">ไม่ใช้งาน</Tag>),
+    },
+    {
+      title: "ลําดับการแสดง",
+      dataIndex: "display_order",
+      key: "display_order",
     },
     {
       title: "การดำเนินการ",
@@ -129,7 +142,7 @@ const handleEdit = (category: UpdateCategoryRequest) => {
       </div>
 
       <Card>
-        <Table
+        <Table<Category>
           columns={columns}
           dataSource={categories?.data || []}
           loading={isLoading}

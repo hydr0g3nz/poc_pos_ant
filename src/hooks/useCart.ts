@@ -25,19 +25,19 @@ export const useCart = () => {
     setCartItems(prev => [...prev, item]);
   };
 
-  const removeItem = (itemId: string) => {
+  const removeItem = (itemId: number) => {
     setCartItems(prev => prev.filter(item => item.id !== itemId));
   };
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = (itemId: number, quantity: number) => {
     setCartItems(prev =>
       prev.map(item => {
         if (item.id === itemId) {
-          const pricePerUnit = item.total_price / item.quantity;
+          
           return {
             ...item,
             quantity,
-            total_price: pricePerUnit * quantity
+            total_price: item.price * quantity
           };
         }
         return item;
@@ -51,7 +51,7 @@ export const useCart = () => {
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.total_price, 0);
+    return cartItems.reduce((total, item) => total + item.price, 0);
   };
 
   const getTotalItems = () => {

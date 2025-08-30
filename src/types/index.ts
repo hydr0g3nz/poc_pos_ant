@@ -312,7 +312,7 @@ export interface MenuItemOption {
   id: number;
   optionId: number;
   is_active: boolean;
-  option: MenuOption;
+  option?: MenuOption;
 }
 
 export interface MenuItem {

@@ -338,6 +338,7 @@ export interface SelectedOption {
 
 export interface CartItem {
   id: number;
+  menu_item_id: number;
   name: string;
   price: number;
   quantity: number;

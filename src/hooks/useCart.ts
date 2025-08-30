@@ -36,6 +36,7 @@ export const useCart = () => {
     
     const cartItem: CartItem = {
       id: Date.now(), // temporary ID
+      menu_item_id: menuItem.id,
       name: menuItem.name,
       price: unitPrice,
       quantity,

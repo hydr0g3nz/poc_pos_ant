@@ -1,7 +1,7 @@
 // src/app/customer/menu/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Row,
@@ -200,7 +200,7 @@ export default function MenuPage() {
   };
 
   // Modal สำหรับเลือกตัวเลือก
-  const OptionsModal = () => {
+  const OptionsModal = useMemo(() => {
     if (!selectedItem) return null;
 
     return (
@@ -366,7 +366,7 @@ export default function MenuPage() {
         )}
       </Modal>
     );
-  };
+  }, [selectedItem, optionModalVisible, selectedOptions, itemQuantity]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -465,7 +465,7 @@ export default function MenuPage() {
         </Spin>
 
         {/* Options Modal */}
-        <OptionsModal />
+        {OptionsModal}
 
         {/* Floating Cart Button */}
         <Affix offsetBottom={20}>

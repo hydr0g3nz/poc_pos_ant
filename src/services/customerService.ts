@@ -39,12 +39,8 @@ export const customerService = {
     return response.data;
   },
 
-  // Order APIs
-  addOrderItems: async (orderData: AddOrderItemListRequest): Promise<ApiResponse<OrderItem[]>> => {
-    const response = await api.post('/customers/orders/items', orderData);
-    return response.data;
-  },
 
+  // Order APIs
   manageOrderItems: async (orderData: ManageOrderItemListRequest): Promise<ApiResponse<OrderItem[]>> => {
     const response = await api.post('/customers/orders/items', orderData);
     return response.data;

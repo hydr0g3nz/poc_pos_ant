@@ -9,25 +9,26 @@ import { message } from 'antd';
 interface UseMenuOptions {
   isAdmin?: boolean;
   limit?: number;
-  autoLoad?: boolean;
 }
 
-export const useMenu = ({ isAdmin = false, limit = 10, autoLoad = true }: UseMenuOptions = {}) => {
+export const useMenu = ({ isAdmin = false, limit = 12 }: UseMenuOptions = {}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [loadingItem, setLoadingItem] = useState(false);
+
+  // สร้าง cache key ที่ถูกต้อง
+  const menuCacheKey = [
+    'menu-items',
+    searchQuery,
+    selectedCategory,
+    currentPage,
+    limit,
+    isAdmin
+  ];
 
   // Load menu items
-  const { data: menuItems, isLoading, mutate } = useSWR(
-    autoLoad ? [
-      'menu-items',
-      searchQuery,
-      selectedCategory,
-      currentPage,
-      limit,
-      isAdmin
-    ] : null,
+  const { data: menuResponse, isLoading, mutate } = useSWR(
+    menuCacheKey,
     async () => {
       const service = isAdmin ? adminService : customerService;
       
@@ -35,30 +36,19 @@ export const useMenu = ({ isAdmin = false, limit = 10, autoLoad = true }: UseMen
         return await service.searchMenuItems(searchQuery, limit, currentPage);
       }
       
-      return await service.getMenuItems(limit, currentPage);
+      // if (selectedCategory) {
+      //   return await service.getMenuItemsByCategory(selectedCategory, limit, (currentPage - 1) * limit);
+      // }
+      
+      return await service.getMenuItems(limit, (currentPage - 1) * limit);
     }
   );
 
   // Load categories
-  const { data: categories } = useSWR(
-    'categories',
+  const { data: categoriesResponse } = useSWR(
+    'menu-categories',
     () => isAdmin ? adminService.getCategories() : customerService.getCategories()
   );
-
-  // Load single menu item with details
-  const loadMenuItem = useCallback(async (id: number): Promise<MenuItem | null> => {
-    setLoadingItem(true);
-    try {
-      const service = isAdmin ? adminService : customerService;
-      const response = await service.getMenuItem(id);
-      return response.data;
-    } catch (error) {
-      message.error('ไม่สามารถโหลดรายละเอียดเมนูได้');
-      return null;
-    } finally {
-      setLoadingItem(false);
-    }
-  }, [isAdmin]);
 
   // Search functions
   const search = useCallback((query: string) => {
@@ -83,12 +73,11 @@ export const useMenu = ({ isAdmin = false, limit = 10, autoLoad = true }: UseMen
 
   return {
     // Data
-    menuItems: menuItems?.data,
-    categories: categories?.data,
+    menuItems: menuResponse?.data,
+    categories: categoriesResponse?.data,
     
     // Loading states
     isLoading,
-    loadingItem,
     
     // Current state
     currentPage,
@@ -100,7 +89,6 @@ export const useMenu = ({ isAdmin = false, limit = 10, autoLoad = true }: UseMen
     filterByCategory,
     clearFilters,
     changePage,
-    loadMenuItem,
     refetch: mutate,
   };
 };

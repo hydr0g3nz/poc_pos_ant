@@ -336,12 +336,14 @@ export interface SelectedOption {
   additionalPrice: number;
 }
 
+// src/types/index.ts - แก้ไข CartItem
 export interface CartItem {
   id: number;
   menu_item_id: number;
   name: string;
-  price: number;
+  price: number; // ราคาต่อหน่วยรวม options แล้ว
   quantity: number;
   selectedOptions?: SelectedOption[];
+  optionsText?: string; // เก็บข้อความ options ไว้
   notes?: string;
 }

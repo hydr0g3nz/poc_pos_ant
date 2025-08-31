@@ -1,124 +1,124 @@
-// src/hooks/useCart.ts (แทนที่ไฟล์เดิม)
+// src/hooks/useCart.ts
 import { useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, SelectedOption } from '@/types';
 import { MenuUtils } from '@/utils/utils';
 import { message } from 'antd';
 
-export const useCart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+const CART_STORAGE_KEY = 'restaurant-cart';
 
-  // Load cart from localStorage
+export const useCart = () => {
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  // โหลดตะกร้าจาก localStorage
   useEffect(() => {
-    const savedCart = localStorage.getItem('restaurant-cart');
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Failed to parse cart from localStorage');
-        localStorage.removeItem('restaurant-cart');
+    try {
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
       }
+    } catch (error) {
+      console.error('Failed to load cart from localStorage:', error);
+      localStorage.removeItem(CART_STORAGE_KEY);
     }
   }, []);
 
-  // Save cart to localStorage
+  // บันทึกตะกร้าไป localStorage
   useEffect(() => {
-    localStorage.setItem('restaurant-cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
-  const addItem = useCallback((
-    menuItem: MenuItem,
-    selectedOptions: SelectedOption[] = [],
-    quantity: number = 1,
-    notes?: string
-  ) => {
-    const itemKey = MenuUtils.generateCartItemKey(menuItem.id, selectedOptions);
-    const unitPrice = menuItem.price + MenuUtils.calculateOptionsPrice(selectedOptions);
-    
-    const cartItem: CartItem = {
-      id: Date.now(), // temporary ID
-      menu_item_id: menuItem.id,
-      name: menuItem.name,
-      price: unitPrice,
-      quantity,
-      selectedOptions,
-      notes,
-    };
+  // เพิ่มรายการเข้าตะกร้า
+// src/hooks/useCart.ts - แก้ไขส่วน addItem
+const addItem = useCallback((
+  menuItem: MenuItem,
+  selectedOptions: SelectedOption[] = [],
+  quantity: number = 1,
+  notes?: string
+) => {
+  const optionsPrice = MenuUtils.calculateOptionsPrice(selectedOptions);
+  const unitPrice = menuItem.price + optionsPrice;
+  const itemKey = MenuUtils.generateCartItemKey(menuItem.id, selectedOptions);
+  
+  // สร้างข้อความอธิบาย options
+  const optionsText = MenuUtils.getOptionsDescription(menuItem, selectedOptions);
+  
+  setItems(prev => {
+    const existingIndex = prev.findIndex(item => 
+      MenuUtils.generateCartItemKey(item.menu_item_id, item.selectedOptions || []) === itemKey
+    );
 
-    setCartItems(prev => {
-      // ตรวจสอบว่ามี item เดียวกัน (รวม options) อยู่แล้วหรือไม่
-      const existingIndex = prev.findIndex(item => 
-        MenuUtils.generateCartItemKey(menuItem.id, item.selectedOptions || []) === itemKey
-      );
+    if (existingIndex >= 0) {
+      const updated = [...prev];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        quantity: updated[existingIndex].quantity + quantity
+      };
+      return updated;
+    } else {
+      const newItem: CartItem = {
+        id: Date.now(),
+        menu_item_id: menuItem.id,
+        name: menuItem.name,
+        price: unitPrice,
+        quantity,
+        selectedOptions: [...selectedOptions],
+        optionsText, // เก็บข้อความไว้
+        notes,
+      };
+      return [...prev, newItem];
+    }
+  });
 
-      if (existingIndex >= 0) {
-        // อัพเดทจำนวน
-        const newItems = [...prev];
-        newItems[existingIndex] = {
-          ...newItems[existingIndex],
-          quantity: newItems[existingIndex].quantity + quantity
-        };
-        return newItems;
-      } else {
-        // เพิ่ม item ใหม่
-        return [...prev, cartItem];
-      }
-    });
+  message.success(`เพิ่ม ${menuItem.name} ลงตะกร้าแล้ว`);
+}, []);
 
-    message.success(`เพิ่ม ${menuItem.name} ลงในตะกร้าแล้ว`);
-  }, []);
-
-  const updateItemQuantity = useCallback((index: number, quantity: number) => {
-    if (quantity <= 0) {
+  // อัพเดทจำนวน
+  const updateQuantity = useCallback((index: number, newQuantity: number) => {
+    if (newQuantity <= 0) {
       removeItem(index);
       return;
     }
 
-    setCartItems(prev => {
-      const newItems = [...prev];
-      newItems[index] = { ...newItems[index], quantity };
-      return newItems;
+    setItems(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], quantity: newQuantity };
+      return updated;
     });
   }, []);
 
+  // ลบรายการ
   const removeItem = useCallback((index: number) => {
-    setCartItems(prev => prev.filter((_, i) => i !== index));
+    setItems(prev => prev.filter((_, i) => i !== index));
     message.info('ลบรายการออกจากตะกร้าแล้ว');
   }, []);
 
+  // ล้างตะกร้า
   const clearCart = useCallback(() => {
-    setCartItems([]);
-    localStorage.removeItem('restaurant-cart');
+    setItems([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
     message.success('ล้างตะกร้าแล้ว');
   }, []);
 
-  const getTotalPrice = useCallback(() => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  }, [cartItems]);
-
-  const getTotalItems = useCallback(() => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
-  }, [cartItems]);
-
-  const getCartSummary = useCallback(() => {
-    const totalItems = getTotalItems();
-    const totalPrice = getTotalPrice();
+  // คำนวณสรุป
+  const summary = useCallback(() => {
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     return {
-      itemCount: totalItems,
+      itemCount: items.length,
+      totalQuantity,
       totalPrice,
       formattedPrice: `฿${totalPrice.toLocaleString()}`,
-      isEmpty: cartItems.length === 0
+      isEmpty: items.length === 0,
     };
-  }, [cartItems, getTotalItems, getTotalPrice]);
+  }, [items]);
 
   return {
-    cartItems,
+    items,
     addItem,
-    updateItemQuantity,
+    updateQuantity,
     removeItem,
     clearCart,
-    getTotalPrice,
-    getTotalItems,
-    getCartSummary,
+    summary: summary(),
   };
 };

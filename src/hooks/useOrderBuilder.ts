@@ -156,7 +156,7 @@ export const useOrderBuilder = (initialOrderId?: number) => {
             action: item.action, // ใช้ action เดียวกัน
           })) || [],
       }));
-
+    setOrderId(orderId ); // reset orderId หลังสร้าง request
     return {
       order_id: orderId,
       items: requestItems,

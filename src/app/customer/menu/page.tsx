@@ -66,10 +66,16 @@ export default function MenuPage() {
     getSelectedOptionsText,
   } = useMenuOptions();
 
-  const { cartItems, addItem, updateItemQuantity, removeItem, getCartSummary } =
-    useCart();
+  const {
+    cartItems,
+    addItem,
+    updateItemQuantity,
+    removeItem,
+    clearCart,
+    getCartSummary,
+  } = useCart();
   const orderBuilder = useOrderBuilder();
-  const { isSubmitting, submitOrder } = useOrderSubmit();  // Local state สำหรับ UI
+  const { isSubmitting, submitOrder } = useOrderSubmit(); // Local state สำหรับ UI
   const [cartVisible, setCartVisible] = useState(false);
   const [optionModalVisible, setOptionModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -127,7 +133,7 @@ export default function MenuPage() {
     );
   };
 
-const handleCheckout = async () => {
+  const handleCheckout = async () => {
     if (isEmpty) {
       message.warning("กรุณาเลือกรายการอาหารก่อน");
       return;
@@ -148,30 +154,27 @@ const handleCheckout = async () => {
       // ตรวจสอบความถูกต้อง
       const validation = orderBuilder.validate();
       if (!validation.isValid) {
-        validation.errors.forEach(error => message.error(error));
+        validation.errors.forEach((error) => message.error(error));
         return;
       }
 
       // แสดง preview (optional)
-      console.log('Order Preview:', orderBuilder.summary);
-      console.log('Request:', orderBuilder.buildRequest());
+      console.log("Order Preview:", orderBuilder.summary);
+      console.log("Request:", orderBuilder.buildRequest());
 
       // ยิง API จริง
       const result = await submitOrder(orderBuilder.buildRequest());
-      
-      // if (result.success) {
-      //   // อัพเดท order builder state
-      //   if (result.data) {
-      //     orderBuilder.markItemsAsSent(result.data);
-      //   }
-        
-      //   // ล้างตะกร้าหลังสำเร็จ
-      //   clearCart();
-      //   setCartVisible(false);
-        
-      //   // ไปหน้าติดตามออเดอร์
-      //   router.push(`/customer/orders/${tableId}`);
-      // }
+
+      if (result.success) {
+        // อัพเดท order builder state
+
+        // ล้างตะกร้าหลังสำเร็จ
+        clearCart();
+        setCartVisible(false);
+
+        // ไปหน้าติดตามออเดอร์
+        // router.push(`/customer/orders/${tableId}`);
+      }
     } catch (error) {
       message.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     }
@@ -233,7 +236,7 @@ const handleCheckout = async () => {
       </div>
     );
   };
-    const OrderPreview = () => {
+  const OrderPreview = () => {
     if (!orderBuilder.hasChanges) return null;
 
     return (
@@ -243,9 +246,9 @@ const handleCheckout = async () => {
         <p>จำนวน: {orderBuilder.summary.totalQuantity}</p>
         <p>ราคารวม: ฿{orderBuilder.summary.totalPrice.toLocaleString()}</p>
         <div className="text-sm text-gray-600">
-          เพิ่ม: {orderBuilder.summary.itemsByAction.add}, 
-          แก้ไข: {orderBuilder.summary.itemsByAction.update}, 
-          ลบ: {orderBuilder.summary.itemsByAction.delete}
+          เพิ่ม: {orderBuilder.summary.itemsByAction.add}, แก้ไข:{" "}
+          {orderBuilder.summary.itemsByAction.update}, ลบ:{" "}
+          {orderBuilder.summary.itemsByAction.delete}
         </div>
       </div>
     );
@@ -604,7 +607,7 @@ const handleCheckout = async () => {
             <Empty description="ไม่มีสินค้าในตะกร้า" />
           )}
         </Drawer>
-        <OrderPreview />
+        {/* <OrderPreview /> */}
       </div>
     </div>
   );

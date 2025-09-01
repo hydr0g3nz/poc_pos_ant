@@ -17,8 +17,9 @@ export const useMenuSelection = (isAdmin = false) => {
     async (id: number): Promise<MenuItem | null> => {
       setIsLoading(true);
       try {
-        const service = isAdmin ? adminService : customerService;
-        const response = await service.getMenuItem(id);
+        // const service = isAdmin ? adminService : customerService;
+        // const response = await service.getMenuItem(id);
+        const response = await customerService.getMenuItem(id);
         return response.data;
       } catch (error) {
         message.error("ไม่สามารถโหลดรายละเอียดเมนูได้");
@@ -38,7 +39,7 @@ export const useMenuSelection = (isAdmin = false) => {
       // โหลดรายละเอียดเพิ่มเติมถ้าจำเป็น
 
       const loaded = await loadMenuItem(item.id);
-      if (!loaded) return false;
+      if (!loaded) return null;
       detailItem = loaded;
 
       setSelectedItem(detailItem);
@@ -48,7 +49,7 @@ export const useMenuSelection = (isAdmin = false) => {
       const defaultOptions = MenuUtils.getDefaultOptions(detailItem);
       setSelectedOptions(defaultOptions);
 
-      return true;
+      return detailItem;
     },
     [loadMenuItem]
   );

@@ -67,11 +67,11 @@ export default function MenuPage() {
 
   // จัดการการคลิกเมนู
   const handleItemClick = async (item: MenuItem) => {
-    const success = await selection.selectMenuItem(item);
-    if (!success) return;
+    const itemSelected = await selection.selectMenuItem(item);
+    if (!itemSelected) return;
 
-    if (MenuUtils.hasOptions(selection?.selectedItem||item)) {
-      modal.openModal(item);
+    if (MenuUtils.hasOptions(itemSelected)) {
+      modal.openModal(itemSelected);
     } else {
       // เพิ่มเข้าตะกร้าเลยถ้าไม่มี options
       cart.addItem(item, [], 1);

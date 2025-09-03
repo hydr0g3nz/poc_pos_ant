@@ -37,7 +37,8 @@ import {
 import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
 import { adminService } from "@/services/adminService";
-import { MenuItem, MenuItemOption, MenuOption, OptionValue } from "@/types";
+import { menuOptionsService } from "@/services/menuOptionsService";
+import { MenuItem, MenuItemOption, MenuOption, OptionValue , Category,OptionWithValues,BulkAssignOptionsRequest} from "@/types";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -74,8 +75,9 @@ export default function MenuManagement() {
   );
 
   // เพิ่ม SWR สำหรับ options
-  const { data: availableOptions } = useSWR("admin-options", () =>
-    adminService.getOptions() // สมมติว่ามี API นี้
+  const { data: availableOptions } = useSWR(
+    "admin-options",
+    () => menuOptionsService.getOptionsWithValues() // สมมติว่ามี API นี้
   );
 
   const handleViewDetail = async (id: number) => {
@@ -100,9 +102,9 @@ export default function MenuManagement() {
       // โหลดรายละเอียดเมนูพร้อม options
       const response = await adminService.getMenuItem(item.id);
       const fullItem = response.data;
-      
+
       setEditingItem(fullItem);
-      
+
       // ตั้งค่าฟอร์มพื้นฐาน
       form.setFieldsValue({
         name: fullItem.name,
@@ -113,9 +115,11 @@ export default function MenuManagement() {
         is_active: fullItem.is_active,
         is_recommended: fullItem.is_recommended,
         display_order: fullItem.display_order,
-        options: fullItem.menu_option?.map(mo => mo.option?.id).filter(Boolean) || [],
+        options:
+          fullItem.menu_option?.map((mo) => mo.option?.id).filter(Boolean) ||
+          [],
       });
-      
+
       setActiveTab("basic");
       setIsModalOpen(true);
     } catch (error) {
@@ -136,7 +140,7 @@ export default function MenuManagement() {
   const handleModalOk = async () => {
     try {
       const values: MenuItemFormData = await form.validateFields();
-
+      console.log("Form Values:", values);
       const menuData = {
         name: values.name,
         description: values.description,
@@ -162,13 +166,18 @@ export default function MenuManagement() {
 
       // จัดการ menu options
       if (values.options && values.options.length > 0) {
+        let bulk_assign_data:BulkAssignOptionsRequest = {
+          option_ids: values.options,
+          menu_item_ids: [menuId],
+          is_active: true,
+        };
         try {
-          await adminService.updateMenuItemOptions(menuId, {
-            option_ids: values.options
-          });
+          await menuOptionsService.bulkAssignOptions(bulk_assign_data);
           message.success("อัพเดทตัวเลือกเมนูสำเร็จ");
         } catch (error) {
-          message.warning("บันทึกเมนูสำเร็จ แต่เกิดข้อผิดพลาดในการอัพเดทตัวเลือก");
+          message.warning(
+            "บันทึกเมนูสำเร็จ แต่เกิดข้อผิดพลาดในการอัพเดทตัวเลือก"
+          );
         }
       }
 
@@ -205,9 +214,12 @@ export default function MenuManagement() {
       >
         <Checkbox.Group className="w-full">
           <Row gutter={[16, 16]}>
-            {availableOptions?.data?.map((option: MenuOption) => (
+            {availableOptions?.data?.map((option: OptionWithValues) => (
               <Col key={option.id} span={24}>
-                <Card size="small" className="hover:shadow-md transition-shadow">
+                <Card
+                  size="small"
+                  className="hover:shadow-md transition-shadow"
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <Checkbox value={option.id}>
@@ -215,28 +227,41 @@ export default function MenuManagement() {
                       </Checkbox>
                       <div className="mt-2 ml-6">
                         <Space>
-                          <Tag color={option.type === 'single' ? 'blue' : 'green'}>
-                            {option.type === 'single' ? 'เลือกได้ 1 ตัวเลือก' : 'เลือกได้หลายตัวเลือก'}
+                          <Tag
+                            color={option.type === "single" ? "blue" : "green"}
+                          >
+                            {option.type === "single"
+                              ? "เลือกได้ 1 ตัวเลือก"
+                              : "เลือกได้หลายตัวเลือก"}
                           </Tag>
-                          {option.isRequired && (
+                          {option.is_required && (
                             <Tag color="red">บังคับเลือก</Tag>
                           )}
                         </Space>
                         <div className="mt-2 text-sm text-gray-600">
                           <strong>ตัวเลือกย่อย:</strong>
                           <div className="mt-1">
-                            {option.optionValues?.map((value, idx) => (
-                              <span key={value.id} className="inline-block mr-2 mb-1">
+                            {option.values?.map((value, idx) => (
+                              <span
+                                key={value.id}
+                                className="inline-block mr-2 mb-1"
+                              >
                                 {value.name}
                                 {parseFloat(value.additionalPrice) > 0 && (
                                   <span className="text-green-600 ml-1">
-                                    (+฿{parseFloat(value.additionalPrice).toLocaleString()})
+                                    (+฿
+                                    {parseFloat(
+                                      value.additionalPrice
+                                    ).toLocaleString()}
+                                    )
                                   </span>
                                 )}
                                 {value.isDefault && (
-                                  <Tag  color="gold" className="ml-1">ค่าเริ่มต้น</Tag>
+                                  <Tag color="gold" className="ml-1">
+                                    ค่าเริ่มต้น
+                                  </Tag>
                                 )}
-                                {idx < option.optionValues.length - 1 && ", "}
+                                {idx < option.values.length - 1 && ", "}
                               </span>
                             ))}
                           </div>
@@ -250,7 +275,7 @@ export default function MenuManagement() {
           </Row>
         </Checkbox.Group>
       </Form.Item>
-      
+
       {!availableOptions?.data?.length && (
         <div className="text-center py-8 text-gray-400">
           <p>ไม่มีตัวเลือกเมนู</p>
@@ -300,14 +325,14 @@ export default function MenuManagement() {
         </Tag>
       ),
     },
-    {
-      title: "ตัวเลือก",
-      dataIndex: "menu_option",
-      key: "menu_option",
-      render: (menuOptions: MenuItemOption[]) =>
-        renderOptionsPreview(menuOptions),
-      width: 200,
-    },
+    // {
+    //   title: "ตัวเลือก",
+    //   dataIndex: "menu_option",
+    //   key: "menu_option",
+    //   render: (menuOptions: MenuItemOption[]) =>
+    //     renderOptionsPreview(menuOptions),
+    //   width: 200,
+    // },
     {
       title: "การดำเนินการ",
       key: "action",
@@ -329,7 +354,7 @@ export default function MenuManagement() {
           >
             แก้ไข
           </Button>
-          <Button
+          {/* <Button
             size="small"
             icon={<SettingOutlined />}
             onClick={() => {
@@ -338,7 +363,7 @@ export default function MenuManagement() {
             }}
           >
             จัดการตัวเลือก
-          </Button>
+          </Button> */}
           <Popconfirm
             title="ต้องการลบเมนูนี้?"
             onConfirm={() => handleDeleteItem(record.id)}
@@ -361,11 +386,15 @@ export default function MenuManagement() {
         <Space>
           <Button
             icon={<SettingOutlined />}
-            onClick={() => window.location.href = '/admin/options'}
+            onClick={() => (window.location.href = "/admin/options")}
           >
             จัดการตัวเลือกเมนู
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddItem}
+          >
             เพิ่มเมนูใหม่
           </Button>
         </Space>
@@ -477,7 +506,9 @@ export default function MenuManagement() {
                       formatter={(value) =>
                         `฿ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
-                      parser={(value) => value!.replace(/฿\s?|(,*)/g, "") as any}
+                      parser={(value) =>
+                        value!.replace(/฿\s?|(,*)/g, "") as any
+                      }
                     />
                   </Form.Item>
                 </Col>
@@ -489,20 +520,31 @@ export default function MenuManagement() {
 
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item name="is_active" label="สถานะ" valuePropName="checked">
-                    <Switch checkedChildren="เปิดใช้งาน" unCheckedChildren="ปิดใช้งาน" />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item name="is_recommended" label="แนะนำ" valuePropName="checked">
-                    <Switch checkedChildren="แนะนำ" unCheckedChildren="ไม่แนะนำ" />
+                  <Form.Item
+                    name="is_active"
+                    label="สถานะ"
+                    valuePropName="checked"
+                  >
+                    <Switch
+                      checkedChildren="เปิดใช้งาน"
+                      unCheckedChildren="ปิดใช้งาน"
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
                   <Form.Item
-                    name="display_order"
-                    label="ลำดับการแสดง"
+                    name="is_recommended"
+                    label="แนะนำ"
+                    valuePropName="checked"
                   >
+                    <Switch
+                      checkedChildren="แนะนำ"
+                      unCheckedChildren="ไม่แนะนำ"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="display_order" label="ลำดับการแสดง">
                     <InputNumber
                       placeholder="ลำดับ"
                       style={{ width: "100%" }}
@@ -514,66 +556,89 @@ export default function MenuManagement() {
             </Form>
           </TabPane>
 
-          <TabPane tab={`ตัวเลือกเมนู ${editingItem?.menu_option?.length ? `(${editingItem.menu_option.length})` : ''}`} key="options">
+          <TabPane
+            tab={`ตัวเลือกเมนู ${
+              editingItem?.menu_option?.length
+                ? `(${editingItem.menu_option.length})`
+                : ""
+            }`}
+            key="options"
+          >
             <Form form={form} layout="vertical">
               <OptionsSelector />
-              
+
               {/* แสดงตัวเลือกปัจจุบัน (สำหรับกรณีแก้ไข) */}
-              {editingItem?.menu_option && editingItem.menu_option.length > 0 && (
-                <div className="mt-6">
-                  <Divider />
-                  <Title level={5}>ตัวเลือกปัจจุบัน</Title>
-                  <Collapse size="small">
-                    {editingItem.menu_option.map((menuOption, index) => (
-                      <Panel
-                        key={index}
-                        header={
-                          <div className="flex justify-between items-center">
-                            <span>{menuOption.option?.name}</span>
-                            <Space>
-                              <Tag color={menuOption.option?.type === 'single' ? 'blue' : 'green'}>
-                                {menuOption.option?.type === 'single' ? 'เลือกได้ 1 ตัวเลือก' : 'เลือกได้หลายตัวเลือก'}
-                              </Tag>
-                              {menuOption.option?.isRequired && (
-                                <Tag color="red">บังคับเลือก</Tag>
-                              )}
-                              <Tag color={menuOption.is_active ? 'green' : 'red'}>
-                                {menuOption.is_active ? 'ใช้งาน' : 'ปิดใช้งาน'}
-                              </Tag>
-                            </Space>
-                          </div>
-                        }
-                      >
-                        <List
-                          size="small"
-                          dataSource={menuOption.option?.optionValues || []}
-                          renderItem={(value) => (
-                            <List.Item className="flex justify-between">
-                              <div className="flex items-center">
-                                <span>{value.name}</span>
-                                {value.isDefault && (
-                                  <Tag color="gold"  className="ml-2">
-                                    ค่าเริ่มต้น
-                                  </Tag>
+              {editingItem?.menu_option &&
+                editingItem.menu_option.length > 0 && (
+                  <div className="mt-6">
+                    <Divider />
+                    <Title level={5}>ตัวเลือกปัจจุบัน</Title>
+                    <Collapse size="small">
+                      {editingItem.menu_option.map((menuOption, index) => (
+                        <Panel
+                          key={index}
+                          header={
+                            <div className="flex justify-between items-center">
+                              <span>{menuOption.option?.name}</span>
+                              <Space>
+                                <Tag
+                                  color={
+                                    menuOption.option?.type === "single"
+                                      ? "blue"
+                                      : "green"
+                                  }
+                                >
+                                  {menuOption.option?.type === "single"
+                                    ? "เลือกได้ 1 ตัวเลือก"
+                                    : "เลือกได้หลายตัวเลือก"}
+                                </Tag>
+                                {menuOption.option?.isRequired && (
+                                  <Tag color="red">บังคับเลือก</Tag>
                                 )}
-                              </div>
-                              <div>
-                                {parseFloat(value.additionalPrice) > 0 ? (
-                                  <span className="text-green-600">
-                                    +฿{parseFloat(value.additionalPrice).toLocaleString()}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">ฟรี</span>
-                                )}
-                              </div>
-                            </List.Item>
-                          )}
-                        />
-                      </Panel>
-                    ))}
-                  </Collapse>
-                </div>
-              )}
+                                <Tag
+                                  color={menuOption.is_active ? "green" : "red"}
+                                >
+                                  {menuOption.is_active
+                                    ? "ใช้งาน"
+                                    : "ปิดใช้งาน"}
+                                </Tag>
+                              </Space>
+                            </div>
+                          }
+                        >
+                          <List
+                            size="small"
+                            dataSource={menuOption.option?.optionValues || []}
+                            renderItem={(value) => (
+                              <List.Item className="flex justify-between">
+                                <div className="flex items-center">
+                                  <span>{value.name}</span>
+                                  {value.isDefault && (
+                                    <Tag color="gold" className="ml-2">
+                                      ค่าเริ่มต้น
+                                    </Tag>
+                                  )}
+                                </div>
+                                <div>
+                                  {parseFloat(value.additionalPrice) > 0 ? (
+                                    <span className="text-green-600">
+                                      +฿
+                                      {parseFloat(
+                                        value.additionalPrice
+                                      ).toLocaleString()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">ฟรี</span>
+                                  )}
+                                </div>
+                              </List.Item>
+                            )}
+                          />
+                        </Panel>
+                      ))}
+                    </Collapse>
+                  </div>
+                )}
             </Form>
           </TabPane>
         </Tabs>
@@ -667,7 +732,7 @@ export default function MenuManagement() {
                           <div className="flex items-center">
                             <span>{value.name}</span>
                             {value.isDefault && (
-                              <Tag color="gold"  className="ml-2">
+                              <Tag color="gold" className="ml-2">
                                 ค่าเริ่มต้น
                               </Tag>
                             )}

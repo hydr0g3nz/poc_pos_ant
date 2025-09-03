@@ -377,3 +377,121 @@ export interface UpdateOptionValueRequest {
   isDefault: boolean;
   display_order?: number;
 }
+// เพิ่มใน src/types/index.ts
+
+export interface OptionValue {
+  id: number;
+  option_id: number;
+  name: string;
+  is_default: boolean;
+  additional_price: number;
+  display_order: number;
+}
+
+export interface OptionWithValues {
+  id: number;
+  name: string;
+  type: 'single' | 'multiple';
+  is_required: boolean;
+  values: OptionValue[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateOptionWithValuesRequest {
+  name: string;
+  type: 'single' | 'multiple';
+  is_required: boolean;
+  values: CreateOptionValueRequest[];
+}
+
+export interface CreateOptionValueRequest {
+  name: string;
+  additional_price: string;
+  is_default: boolean;
+  display_order?: number;
+}
+
+export interface UpdateOptionWithValuesRequest {
+  name: string;
+  type: 'single' | 'multiple';
+  is_required: boolean;
+  values: UpdateOptionValueRequest2[];
+}
+
+export interface UpdateOptionValueRequest2 {
+  id?: number;
+  name: string;
+  additional_price: number;
+  is_default: boolean;
+  display_order?: number;
+  action?: 'add' | 'update' | 'delete';
+}
+
+export interface MenuItemWithOptions {
+  id: number;
+  category_id: number;
+  kitchen_station_id: number;
+  name: string;
+  description: string;
+  price: number;
+  is_active: boolean;
+  is_recommended: boolean;
+  display_order: number;
+  category: string;
+  kitchen_station: string;
+  available_options: MenuItemOptionDetail[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuItemOptionDetail {
+  option_id: number;
+  option_name: string;
+  option_type: string;
+  is_required: boolean;
+  is_active: boolean;
+  values: OptionValue[];
+}
+
+export interface CreateMenuItemWithOptionsRequest {
+  category_id: number;
+  kitchen_station_id: number;
+  name: string;
+  description?: string;
+  price: number;
+  is_active: boolean;
+  is_recommended: boolean;
+  display_order?: number;
+  assigned_options?: AssignMenuItemOptionRequest[];
+}
+
+export interface UpdateMenuItemWithOptionsRequest {
+  category_id: number;
+  kitchen_station_id: number;
+  name: string;
+  description?: string;
+  price: number;
+  is_active: boolean;
+  is_recommended: boolean;
+  display_order?: number;
+  assigned_options?: AssignMenuItemOptionRequest[];
+}
+
+export interface AssignMenuItemOptionRequest {
+  option_id: number;
+  is_active: boolean;
+}
+
+export interface MenuItemWithOptionsListResponse {
+  items: MenuItemWithOptions[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface BulkAssignOptionsRequest {
+  menu_item_ids: number[];
+  option_ids: number[];
+  is_active: boolean;
+}

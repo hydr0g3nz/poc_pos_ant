@@ -347,3 +347,33 @@ export interface CartItem {
   optionsText?: string; // เก็บข้อความ options ไว้
   notes?: string;
 }
+
+// เพิ่มใน src/types/index.ts
+
+export interface CreateOptionRequest {
+  name: string;
+  type: 'single' | 'multiple';
+  isRequired: boolean;
+  values: CreateOptionValueRequest[];
+}
+
+export interface UpdateOptionRequest {
+  name: string;
+  type: 'single' | 'multiple';
+  isRequired: boolean;
+}
+
+export interface CreateOptionValueRequest {
+  name: string;
+  additionalPrice: string;
+  isDefault: boolean;
+  display_order?: number;
+}
+
+export interface UpdateOptionValueRequest {
+  id?: number;
+  name: string;
+  additionalPrice: string;
+  isDefault: boolean;
+  display_order?: number;
+}

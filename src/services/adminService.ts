@@ -14,7 +14,11 @@ import {
   Table,
   CreateTableRequest,
   UpdateTableRequest,
-  PaymentListResponse
+  PaymentListResponse,
+  MenuOption,
+  CreateOptionRequest,
+  UpdateOptionRequest,
+  MenuItemOption
 } from '@/types';
 
 export const adminService = {
@@ -215,6 +219,37 @@ export const adminService = {
     const response = await api.get(
       `/payments/date-range?start_date=${startDate}&end_date=${endDate}&limit=${limit}&offset=${offset}`
     );
+    return response.data;
+  },
+
+  getOptions: async (): Promise<ApiResponse<MenuOption[]>> => {
+    const response = await api.get('/options');
+    return response.data;
+  },
+
+  createOption: async (data: CreateOptionRequest): Promise<ApiResponse<MenuOption>> => {
+    const response = await api.post('/options', data);
+    return response.data;
+  },
+
+  updateOption: async (id: number, data: UpdateOptionRequest): Promise<ApiResponse<MenuOption>> => {
+    const response = await api.put(`/options/${id}`, data);
+    return response.data;
+  },
+
+  deleteOption: async (id: number): Promise<ApiResponse<void>> => {
+    const response = await api.delete(`/options/${id}`);
+    return response.data;
+  },
+
+  // Menu Item Options APIs
+  updateMenuItemOptions: async (menuItemId: number, data: { option_ids: number[] }): Promise<ApiResponse<void>> => {
+    const response = await api.put(`/menu-items/${menuItemId}/options`, data);
+    return response.data;
+  },
+
+  getMenuItemOptions: async (menuItemId: number): Promise<ApiResponse<MenuItemOption[]>> => {
+    const response = await api.get(`/menu-items/${menuItemId}/options`);
     return response.data;
   },
 };

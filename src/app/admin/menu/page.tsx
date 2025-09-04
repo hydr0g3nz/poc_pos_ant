@@ -38,7 +38,17 @@ import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
 import { adminService } from "@/services/adminService";
 import { menuOptionsService } from "@/services/menuOptionsService";
-import { MenuItem, MenuItemOption, MenuOption, OptionValue , Category,OptionWithValues,BulkAssignOptionsRequest} from "@/types";
+import {
+  MenuItem,
+  MenuItemOption,
+  MenuOption,
+  OptionValue,
+  Category,
+  OptionWithValues,
+  AssignMenuItemOptionRequest,
+  CreateMenuItemWithOptionsRequest,
+  UpdateMenuItemWithOptionsRequest,
+} from "@/types";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -104,7 +114,7 @@ export default function MenuManagement() {
       const fullItem = response.data;
 
       setEditingItem(fullItem);
-
+      setSelectedItem(fullItem);
       // ตั้งค่าฟอร์มพื้นฐาน
       form.setFieldsValue({
         name: fullItem.name,
@@ -141,50 +151,76 @@ export default function MenuManagement() {
     try {
       const values: MenuItemFormData = await form.validateFields();
       console.log("Form Values:", values);
-      const menuData = {
+      const menuData : CreateMenuItemWithOptionsRequest|UpdateMenuItemWithOptionsRequest = {
+        category_id: values.category_id,
+        kitchen_station_id: values.kitchen_station_id,
         name: values.name,
         description: values.description,
         price: values.price,
-        category_id: values.category_id,
-        kitchen_station_id: values.kitchen_station_id,
         is_active: values.is_active ?? true,
         is_recommended: values.is_recommended ?? false,
         display_order: values.display_order ?? 0,
+        assigned_options: [] as AssignMenuItemOptionRequest[],
       };
-
-      let menuId: number;
-
+      // จัดการ menu options
+      let menuOptions: AssignMenuItemOptionRequest[] = [];
+      if (
+        selectedItem?.menu_option &&
+        selectedItem.menu_option.length > 0 &&
+        values.options?.length === 0
+      ) {
+        // ถ้าไม่มีการเลือก options ใหม่เลย ให้ปิดการใช้งาน options เดิมทั้งหมด
+        selectedItem.menu_option.forEach((mo) => {
+          menuOptions.push({
+            option_id: mo.option!.id,
+            is_active: false,
+          });
+        });
+      }
+      if (values.options && values.options.length > 0) {
+        selectedItem?.menu_option?.forEach((mo) => {
+          if (!values.options?.includes(mo.option!.id)) {
+            menuOptions.push({
+              option_id: mo.option!.id,
+              is_active: false,
+            });
+          }
+        });
+       
+        values.options.forEach((optionId) => {
+          if (!selectedItem?.menu_option?.some((mo) => mo.option?.id === optionId)) {
+          menuOptions.push({
+            option_id: optionId,
+            is_active: true,
+          });
+          }
+        });
+        
+      }
+      console.log("Menu Options to Assign:", menuOptions);
+      console.log("options:", selectedItem?.menu_option);
+      if (menuOptions.length > 0) {
+        menuData.assigned_options = menuOptions;
+      }
+      console.log("Final Menu Data to Submit:", menuData.assigned_options);
       if (editingItem) {
-        await adminService.updateMenuItem(editingItem.id, menuData);
-        menuId = editingItem.id;
+        await menuOptionsService.updateMenuItemWithOptions(
+          editingItem.id,
+          menuData
+        );
         message.success("แก้ไขเมนูสำเร็จ");
       } else {
-        const response = await adminService.createMenuItem(menuData);
-        menuId = response.data.id;
+        const response = await menuOptionsService.createMenuItemWithOptions(
+          menuData
+        );
         message.success("เพิ่มเมนูสำเร็จ");
-      }
-
-      // จัดการ menu options
-      if (values.options && values.options.length > 0) {
-        let bulk_assign_data:BulkAssignOptionsRequest = {
-          option_ids: values.options,
-          menu_item_ids: [menuId],
-          is_active: true,
-        };
-        try {
-          await menuOptionsService.bulkAssignOptions(bulk_assign_data);
-          message.success("อัพเดทตัวเลือกเมนูสำเร็จ");
-        } catch (error) {
-          message.warning(
-            "บันทึกเมนูสำเร็จ แต่เกิดข้อผิดพลาดในการอัพเดทตัวเลือก"
-          );
-        }
       }
 
       setIsModalOpen(false);
       mutate("admin-menu-items");
     } catch (error) {
-      message.error("เกิดข้อผิดพลาด");
+      message.error("เกิดข้อผิดพลาดในการบันทึกเมนู");
+      console.error("Error details:", error);
     }
   };
 
@@ -220,6 +256,8 @@ export default function MenuManagement() {
                   size="small"
                   className="hover:shadow-md transition-shadow"
                 >
+                  <label className="w-full cursor-pointer">
+
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <Checkbox value={option.id}>
@@ -269,6 +307,7 @@ export default function MenuManagement() {
                       </div>
                     </div>
                   </div>
+                  </label>
                 </Card>
               </Col>
             ))}

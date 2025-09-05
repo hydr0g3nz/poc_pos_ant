@@ -18,7 +18,10 @@ import {
   MenuOption,
   CreateOptionRequest,
   UpdateOptionRequest,
-  MenuItemOption
+  MenuItemOption,
+  CreateKitchenStationRequest,
+  UpdateKitchenStationRequest,
+  KitchenStation
 } from '@/types';
 
 export const adminService = {
@@ -28,8 +31,8 @@ export const adminService = {
     return response.data;
   },
 
-  getCategories: async (): Promise<ApiResponse<Category[]>> => {
-    const response = await api.get('/categories');
+  getCategories: async (on_active?: boolean): Promise<ApiResponse<Category[]>> => {
+    const response = await api.get('/categories?only_active=' + (on_active ? 'true' : 'false'));
     return response.data;
   },
 
@@ -252,6 +255,30 @@ export const adminService = {
     const response = await api.get(`/menu-items/${menuItemId}/options`);
     return response.data;
   },
+// Kitchen Station APIs
+  getKitchenStations: async (onlyAvailable?: boolean): Promise<ApiResponse<KitchenStation[]>> => {
+    const response = await api.get('/kitchen?only_available=' + (onlyAvailable ? 'true' : 'false'));
+    return response.data;
+  },
 
+  createKitchenStation: async (data: CreateKitchenStationRequest): Promise<ApiResponse<KitchenStation>> => {
+    const response = await api.post('/kitchen', data);
+    return response.data;
+  },
+
+  // getKitchenStation: async (id: number): Promise<ApiResponse<KitchenStation>> => {
+  //   const response = await api.get(`/kitchen/${id}`);
+  //   return response.data;
+  // },
+
+  updateKitchenStation: async (id: number, data: UpdateKitchenStationRequest): Promise<ApiResponse<KitchenStation>> => {
+    const response = await api.put(`/kitchen/${id}`, data);
+    return response.data;
+  },
+
+  deleteKitchenStation: async (id: number): Promise<ApiResponse<void>> => {
+    const response = await api.delete(`/kitchen/${id}`);
+    return response.data;
+  },
   
 };

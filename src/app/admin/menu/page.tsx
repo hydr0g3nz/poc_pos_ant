@@ -49,6 +49,7 @@ import {
   CreateMenuItemWithOptionsRequest,
   UpdateMenuItemWithOptionsRequest,
 } from "@/types";
+import { on } from "events";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -89,7 +90,9 @@ export default function MenuManagement() {
     "admin-options",
     () => menuOptionsService.getOptionsWithValues() // สมมติว่ามี API นี้
   );
-
+  const { data: kitchenStations } = useSWR("admin-kitchen-stations", () =>
+    adminService.getKitchenStations()
+  );
   const handleViewDetail = async (id: number) => {
     try {
       const response = await adminService.getMenuItem(id);
@@ -121,7 +124,7 @@ export default function MenuManagement() {
         description: fullItem.description,
         price: fullItem.price,
         category_id: fullItem.category_id,
-        kitchen_station_id: 1, // ปรับตามข้อมูลจริง
+        kitchen_station_id: fullItem.kitchen_station_id, // ปรับตามข้อมูลจริง
         is_active: fullItem.is_active,
         is_recommended: fullItem.is_recommended,
         display_order: fullItem.display_order,
@@ -151,7 +154,9 @@ export default function MenuManagement() {
     try {
       const values: MenuItemFormData = await form.validateFields();
       console.log("Form Values:", values);
-      const menuData : CreateMenuItemWithOptionsRequest|UpdateMenuItemWithOptionsRequest = {
+      const menuData:
+        | CreateMenuItemWithOptionsRequest
+        | UpdateMenuItemWithOptionsRequest = {
         category_id: values.category_id,
         kitchen_station_id: values.kitchen_station_id,
         name: values.name,
@@ -186,16 +191,17 @@ export default function MenuManagement() {
             });
           }
         });
-       
+
         values.options.forEach((optionId) => {
-          if (!selectedItem?.menu_option?.some((mo) => mo.option?.id === optionId)) {
-          menuOptions.push({
-            option_id: optionId,
-            is_active: true,
-          });
+          if (
+            !selectedItem?.menu_option?.some((mo) => mo.option?.id === optionId)
+          ) {
+            menuOptions.push({
+              option_id: optionId,
+              is_active: true,
+            });
           }
         });
-        
       }
       console.log("Menu Options to Assign:", menuOptions);
       console.log("options:", selectedItem?.menu_option);
@@ -257,56 +263,57 @@ export default function MenuManagement() {
                   className="hover:shadow-md transition-shadow"
                 >
                   <label className="w-full cursor-pointer">
-
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <Checkbox value={option.id}>
-                        <span className="font-medium">{option.name}</span>
-                      </Checkbox>
-                      <div className="mt-2 ml-6">
-                        <Space>
-                          <Tag
-                            color={option.type === "single" ? "blue" : "green"}
-                          >
-                            {option.type === "single"
-                              ? "เลือกได้ 1 ตัวเลือก"
-                              : "เลือกได้หลายตัวเลือก"}
-                          </Tag>
-                          {option.is_required && (
-                            <Tag color="red">บังคับเลือก</Tag>
-                          )}
-                        </Space>
-                        <div className="mt-2 text-sm text-gray-600">
-                          <strong>ตัวเลือกย่อย:</strong>
-                          <div className="mt-1">
-                            {option.values?.map((value, idx) => (
-                              <span
-                                key={value.id}
-                                className="inline-block mr-2 mb-1"
-                              >
-                                {value.name}
-                                {parseFloat(value.additionalPrice) > 0 && (
-                                  <span className="text-green-600 ml-1">
-                                    (+฿
-                                    {parseFloat(
-                                      value.additionalPrice
-                                    ).toLocaleString()}
-                                    )
-                                  </span>
-                                )}
-                                {value.isDefault && (
-                                  <Tag color="gold" className="ml-1">
-                                    ค่าเริ่มต้น
-                                  </Tag>
-                                )}
-                                {idx < option.values.length - 1 && ", "}
-                              </span>
-                            ))}
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <Checkbox value={option.id}>
+                          <span className="font-medium">{option.name}</span>
+                        </Checkbox>
+                        <div className="mt-2 ml-6">
+                          <Space>
+                            <Tag
+                              color={
+                                option.type === "single" ? "blue" : "green"
+                              }
+                            >
+                              {option.type === "single"
+                                ? "เลือกได้ 1 ตัวเลือก"
+                                : "เลือกได้หลายตัวเลือก"}
+                            </Tag>
+                            {option.is_required && (
+                              <Tag color="red">บังคับเลือก</Tag>
+                            )}
+                          </Space>
+                          <div className="mt-2 text-sm text-gray-600">
+                            <strong>ตัวเลือกย่อย:</strong>
+                            <div className="mt-1">
+                              {option.values?.map((value, idx) => (
+                                <span
+                                  key={value.id}
+                                  className="inline-block mr-2 mb-1"
+                                >
+                                  {value.name}
+                                  {parseFloat(value.additionalPrice) > 0 && (
+                                    <span className="text-green-600 ml-1">
+                                      (+฿
+                                      {parseFloat(
+                                        value.additionalPrice
+                                      ).toLocaleString()}
+                                      )
+                                    </span>
+                                  )}
+                                  {value.isDefault && (
+                                    <Tag color="gold" className="ml-1">
+                                      ค่าเริ่มต้น
+                                    </Tag>
+                                  )}
+                                  {idx < option.values.length - 1 && ", "}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   </label>
                 </Card>
               </Col>
@@ -500,12 +507,24 @@ export default function MenuManagement() {
                     label="หมวดหมู่"
                     rules={[{ required: true, message: "กรุณาเลือกหมวดหมู่" }]}
                   >
-                    <Select placeholder="เลือกหมวดหมู่">
-                      {categories?.data?.map((category: any) => (
-                        <Select.Option key={category.id} value={category.id}>
-                          {category.name}
-                        </Select.Option>
-                      ))}
+                    <Select
+                      placeholder="เลือกหมวดหมู่"
+                      options={categories?.data?.map((category: Category) => ({
+                        label: category.name,
+                        value: category.id,
+                        disabled: !category.is_active,
+                      }))}
+                    >
+                      {/* {categories?.data
+                        ?.filter((category: any) => category.is_active)
+                        .map((category: any) => (
+                          <Select.Option
+                            key={"category" + category.id}
+                            value={category.id}
+                          >
+                            {category.name}
+                          </Select.Option>
+                        ))} */}
                     </Select>
                   </Form.Item>
                 </Col>
@@ -518,9 +537,19 @@ export default function MenuManagement() {
                     label="สถานีครัว"
                     rules={[{ required: true, message: "กรุณาเลือกสถานีครัว" }]}
                   >
-                    <Select placeholder="เลือกสถานีครัว">
-                      <Select.Option value={1}>สถานีหลัก</Select.Option>
-                      <Select.Option value={2}>สถานีเครื่องดื่ม</Select.Option>
+                    <Select
+                      placeholder="เลือกสถานีครัว"
+                      options={kitchenStations?.data?.map((station: any) => ({
+                        label: station.name,
+                        value: station.id,
+                        disabled: !station.is_available,
+                      }))}
+                    >
+                      {/* { kitchenStations?.data?.filter((station: any) => station.is_available).map((station) => (
+                        <Select.Option key={"station" + station.id} value={station.id}>
+                          {station.name}
+                        </Select.Option>
+                      ))} */}
                     </Select>
                   </Form.Item>
                 </Col>

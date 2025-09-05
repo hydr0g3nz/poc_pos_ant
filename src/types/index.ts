@@ -47,6 +47,7 @@ export interface MenuItemOption {
 export interface MenuItem {
   id: number;
   category_id: number;
+  kitchen_station_id: number;
   name: string;
   description: string;
   price: number;
@@ -495,3 +496,4 @@ export interface BulkAssignOptionsRequest {
   option_ids: number[];
   is_active: boolean;
 }
+

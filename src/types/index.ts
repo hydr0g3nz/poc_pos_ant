@@ -497,3 +497,77 @@ export interface BulkAssignOptionsRequest {
   is_active: boolean;
 }
 
+// เพิ่มใน src/types/index.ts
+
+export interface OrderTotalResponse {
+  order_id: number;
+  items: OrderItem[];
+  total: number;
+  item_count: number;
+}
+
+export interface ProcessPaymentRequest {
+  order_id: number;
+  amount: number;
+  method: 'cash' | 'credit_card' | 'wallet';
+}
+
+export interface OrderTotal {
+  order_id: number;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  service_charge: number;
+  total: number;
+  items: OrderItemWithTotal[];
+}
+
+export interface OrderItemWithTotal {
+  id: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  options_total: number;
+  subtotal: number;
+}
+
+// เพิ่มใน src/types/index.ts
+
+export interface AddOrderItemRequest {
+  order_id: number;
+  item_id: number;
+  quantity: number;
+}
+
+export interface UpdateOrderItemRequest {
+  quantity: number;
+}
+
+export interface EditOrderItem {
+  id?: number;
+  menu_item_id: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  options?: SelectedOrderOption[];
+  isNew?: boolean;
+  isModified?: boolean;
+  toDelete?: boolean;
+}
+
+export interface SelectedOrderOption {
+  option_id: number;
+  option_name: string;
+  value_id: number;
+  value_name: string;
+  additional_price: number;
+}
+
+export interface MenuItemOption {
+  item_id: number;
+  option_id: number;
+  is_active: boolean;
+  option?: MenuOption;
+  values?: OptionValue[];
+}

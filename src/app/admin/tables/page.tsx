@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Space, 
-  Modal, 
-  Form, 
-  Input, 
-  InputNumber, 
+import {
+  Card,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
   Typography,
   message,
   Popconfirm,
   Tag,
-  QRCode
-} from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
+  QRCode,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
   QrcodeOutlined,
-  PrinterOutlined 
-} from '@ant-design/icons';
-import { useState } from 'react';
-import useSWR, { mutate } from 'swr';
-import { adminService } from '@/services/adminService';
+  PrinterOutlined,
+} from "@ant-design/icons";
+import { useState } from "react";
+import useSWR, { mutate } from "swr";
+import { adminService } from "@/services/adminService";
 
 const { Title } = Typography;
 
@@ -35,7 +35,7 @@ export default function TablesManagement() {
   const [selectedTable, setSelectedTable] = useState<any>(null);
   const [form] = Form.useForm();
 
-  const { data: tables, isLoading } = useSWR('admin-tables', () =>
+  const { data: tables , isLoading } = useSWR("admin-tables", () =>
     adminService.getTables()
   );
 
@@ -57,29 +57,29 @@ export default function TablesManagement() {
   const handleDelete = async (id: number) => {
     try {
       await adminService.deleteTable(id);
-      message.success('ลบโต๊ะสำเร็จ');
-      mutate('admin-tables');
+      message.success("ลบโต๊ะสำเร็จ");
+      mutate("admin-tables");
     } catch (error) {
-      message.error('เกิดข้อผิดพลาดในการลบโต๊ะ');
+      message.error("เกิดข้อผิดพลาดในการลบโต๊ะ");
     }
   };
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingTable) {
         await adminService.updateTable(editingTable.id, values);
-        message.success('แก้ไขโต๊ะสำเร็จ');
+        message.success("แก้ไขโต๊ะสำเร็จ");
       } else {
         await adminService.createTable(values);
-        message.success('เพิ่มโต๊ะสำเร็จ');
+        message.success("เพิ่มโต๊ะสำเร็จ");
       }
-      
+
       setIsModalOpen(false);
-      mutate('admin-tables');
+      mutate("admin-tables");
     } catch (error) {
-      message.error('เกิดข้อผิดพลาด');
+      message.error("เกิดข้อผิดพลาด");
     }
   };
 
@@ -90,41 +90,41 @@ export default function TablesManagement() {
 
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
       width: 80,
     },
     {
-      title: 'หมายเลขโต๊ะ',
-      dataIndex: 'table_number',
-      key: 'table_number',
+      title: "หมายเลขโต๊ะ",
+      dataIndex: "table_number",
+      key: "table_number",
       render: (number: number) => (
-        <Tag color="blue" style={{ fontSize: '14px' }}>
+        <Tag color="blue" style={{ fontSize: "14px" }}>
           โต๊ะ {number}
         </Tag>
       ),
     },
     {
-      title: 'จำนวนที่นั่ง',
-      dataIndex: 'seating',
-      key: 'seating',
+      title: "จำนวนที่นั่ง",
+      dataIndex: "seating",
+      key: "seating",
       render: (seating: number) => `${seating} ที่นั่ง`,
     },
     {
-      title: 'สถานะ',
-      dataIndex: 'is_active',
-      key: 'is_active',
+      title: "สถานะ",
+      dataIndex: "is_active",
+      key: "is_active",
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'success' : 'error'}>
-          {isActive ? 'ใช้งานได้' : 'ไม่ใช้งาน'}
+        <Tag color={isActive ? "success" : "error"}>
+          {isActive ? "ใช้งานได้" : "ไม่ใช้งาน"}
         </Tag>
       ),
     },
     {
-      title: 'QR Code',
-      dataIndex: 'qr_code',
-      key: 'qr_code',
+      title: "QR Code",
+      dataIndex: "qr_code",
+      key: "qr_code",
       render: (qrCode: string, record: any) => (
         <Button
           size="small"
@@ -136,8 +136,8 @@ export default function TablesManagement() {
       ),
     },
     {
-      title: 'การดำเนินการ',
-      key: 'action',
+      title: "การดำเนินการ",
+      key: "action",
       width: 250,
       render: (_: any, record: any) => (
         <Space>
@@ -162,11 +162,7 @@ export default function TablesManagement() {
             okText="ใช่"
             cancelText="ไม่"
           >
-            <Button
-              danger
-              size="small"
-              icon={<DeleteOutlined />}
-            >
+            <Button danger size="small" icon={<DeleteOutlined />}>
               ลบ
             </Button>
           </Popconfirm>
@@ -179,11 +175,7 @@ export default function TablesManagement() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <Title level={2}>จัดการโต๊ะ</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           เพิ่มโต๊ะใหม่
         </Button>
       </div>
@@ -193,7 +185,7 @@ export default function TablesManagement() {
           columns={columns}
           dataSource={tables?.data || []}
           loading={isLoading}
-          rowKey="id"
+          // rowKey="id"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -205,29 +197,25 @@ export default function TablesManagement() {
 
       {/* Add/Edit Modal */}
       <Modal
-        title={editingTable ? 'แก้ไขโต๊ะ' : 'เพิ่มโต๊ะใหม่'}
+        title={editingTable ? "แก้ไขโต๊ะ" : "เพิ่มโต๊ะใหม่"}
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={() => setIsModalOpen(false)}
         okText="บันทึก"
         cancelText="ยกเลิก"
       >
-        <Form
-          form={form}
-          layout="vertical"
-          requiredMark={false}
-        >
+        <Form form={form} layout="vertical" requiredMark={false}>
           <Form.Item
             name="table_number"
             label="หมายเลขโต๊ะ"
             rules={[
-              { required: true, message: 'กรุณากรอกหมายเลขโต๊ะ' },
-              { type: 'number', min: 1, message: 'หมายเลขโต๊ะต้องมากกว่า 0' }
+              { required: true, message: "กรุณากรอกหมายเลขโต๊ะ" },
+              { type: "number", min: 1, message: "หมายเลขโต๊ะต้องมากกว่า 0" },
             ]}
           >
             <InputNumber
               placeholder="กรอกหมายเลขโต๊ะ"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               min={1}
             />
           </Form.Item>
@@ -236,13 +224,13 @@ export default function TablesManagement() {
             name="seating"
             label="จำนวนที่นั่ง"
             rules={[
-              { required: true, message: 'กรุณากรอกจำนวนที่นั่ง' },
-              { type: 'number', min: 1, message: 'จำนวนที่นั่งต้องมากกว่า 0' }
+              { required: true, message: "กรุณากรอกจำนวนที่นั่ง" },
+              { type: "number", min: 1, message: "จำนวนที่นั่งต้องมากกว่า 0" },
             ]}
           >
             <InputNumber
               placeholder="กรอกจำนวนที่นั่ง"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               min={1}
             />
           </Form.Item>
@@ -279,14 +267,12 @@ export default function TablesManagement() {
               <p>จำนวนที่นั่ง: {selectedTable.seating} ที่นั่ง</p>
             </div>
             <div className="flex justify-center mb-4">
-              <QRCode 
-                value={selectedTable.qr_code || `table-${selectedTable.id}`} 
+              <QRCode
+                value={selectedTable.qr_code || `table-${selectedTable.id}`}
                 size={200}
               />
             </div>
-            <p className="text-gray-500 text-sm">
-              สแกน QR Code เพื่อสั่งอาหาร
-            </p>
+            <p className="text-gray-500 text-sm">สแกน QR Code เพื่อสั่งอาหาร</p>
           </div>
         )}
       </Modal>

@@ -21,7 +21,14 @@ import {
   MenuItemOption,
   CreateKitchenStationRequest,
   UpdateKitchenStationRequest,
-  KitchenStation
+  KitchenStation,
+  OrderTotalResponse,
+  ProcessPaymentRequest,
+  Payment,
+  OrderItem,
+  AddOrderItemRequest,
+  UpdateOrderItemRequest,
+  ManageOrderItemListRequest
 } from '@/types';
 
 export const adminService = {
@@ -280,5 +287,65 @@ export const adminService = {
     const response = await api.delete(`/kitchen/${id}`);
     return response.data;
   },
-  
+   // Cancel Order
+  cancelOrder: async (id: number): Promise<ApiResponse<Order>> => {
+    const response = await api.put(`/orders/${id}`, { status: 'cancelled' });
+    return response.data;
+  },
+
+  // Calculate Order Total (Check Bill)
+  calculateOrderTotal: async (id: number): Promise<ApiResponse<OrderTotalResponse>> => {
+    const response = await api.get(`/orders/${id}/total`);
+    return response.data;
+  },
+
+  // Process Payment
+  processPayment: async (data: ProcessPaymentRequest): Promise<ApiResponse<Payment>> => {
+    const response = await api.post('/payments', data);
+    return response.data;
+  },
+
+  // Get Payment by Order
+  getPaymentByOrder: async (orderId: number): Promise<ApiResponse<Payment>> => {
+    const response = await api.get(`/payments/order/${orderId}`);
+    return response.data;
+  },
+   // Order Items Management
+  addOrderItem: async (data: AddOrderItemRequest): Promise<ApiResponse<OrderItem>> => {
+    const response = await api.post('/orders/items', data);
+    return response.data;
+  },
+
+  updateOrderItem: async (id: number, data: UpdateOrderItemRequest): Promise<ApiResponse<OrderItem>> => {
+    const response = await api.put(`/orders/items/${id}`, data);
+    return response.data;
+  },
+
+  removeOrderItem: async (id: number): Promise<ApiResponse<void>> => {
+    const response = await api.delete(`/orders/items/${id}`);
+    return response.data;
+  },
+
+  getOrderItems: async (orderId: number): Promise<ApiResponse<OrderItem[]>> => {
+    const response = await api.get(`/orders/${orderId}/items`);
+    return response.data;
+  },
+
+  // Manage Order Items (bulk operations)
+  manageOrderItems: async (data: ManageOrderItemListRequest): Promise<ApiResponse<OrderItem[]>> => {
+    const response = await api.post('/customers/orders/items', data);
+    return response.data;
+  },
+
+  // Get Menu Items for Order Editing
+  getMenuItemsForOrder: async (): Promise<ApiResponse<MenuItemListResponse>> => {
+    const response = await api.get('/menu-items?limit=100&offset=0');
+    return response.data;
+  },
+
+  // // Get Menu Item Options
+  // getMenuItemOptions: async (itemId: number): Promise<ApiResponse<MenuItemOption[]>> => {
+  //   const response = await api.get(`/menu-item-options/item/${itemId}`);
+  //   return response.data;
+  // },
 };

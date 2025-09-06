@@ -65,7 +65,7 @@ export const customerService = {
     return response.data;
   },
 
-  getOrderIdFromQRCode: async (uuid: string): Promise<ApiResponse<{ order_id: number }>> => {
+  getOrderIdFromQRCode: async (uuid: string): Promise<ApiResponse<number>> => {
     const response = await api.get(`/orders/qr-code/${uuid}`);
     return response.data;
   }

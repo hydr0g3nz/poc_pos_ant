@@ -1,6 +1,6 @@
 // สร้างไฟล์ src/components/admin/EditOrderModal.tsx
 
-'use client';
+"use client";
 
 import {
   Modal,
@@ -18,19 +18,24 @@ import {
   Tag,
   Popconfirm,
   message,
-  Spin
-} from 'antd';
+  Spin,
+} from "antd";
 import {
   PlusOutlined,
   MinusOutlined,
   DeleteOutlined,
   ShoppingCartOutlined,
-  
-} from '@ant-design/icons';
-import { useState, useEffect } from 'react';
-import { adminService } from '@/services/adminService';
-import { EditOrderItem, MenuItem, MenuItemOption, SelectedOrderOption } from '@/types';
-
+} from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { adminService } from "@/services/adminService";
+import {
+  EditOrderItem,
+  MenuItem,
+  MenuItemOption,
+  SelectedOrderOption,
+  OrderDetailResponse,
+} from "@/types";
+import Link from "next/link";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -38,10 +43,15 @@ interface EditOrderModalProps {
   open: boolean;
   onCancel: () => void;
   onSave: () => void;
-  order: any;
+  order: OrderDetailResponse | null;
 }
 
-export default function EditOrderModal({ open, onCancel, onSave, order }: EditOrderModalProps) {
+export default function EditOrderModal({
+  open,
+  onCancel,
+  onSave,
+  order,
+}: EditOrderModalProps) {
   const [form] = Form.useForm();
   const [orderItems, setOrderItems] = useState<EditOrderItem[]>([]);
   const [availableMenuItems, setAvailableMenuItems] = useState<MenuItem[]>([]);
@@ -62,30 +72,34 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
       ]);
 
       setAvailableMenuItems(menuItemsResponse.data.items || []);
-      
+
       // Convert existing order items to editable format
-      const editableItems: EditOrderItem[] = (order.items || []).map((item: any) => ({
-        id: item.id,
-        menu_item_id: item.item_id,
-        name: item.menu_item?.name || item.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
-        options: [], // TODO: Load existing options
-        isNew: false,
-        isModified: false,
-      }));
+      const editableItems: EditOrderItem[] = (order.items || []).map(
+        (item: any) => ({
+          id: item.id,
+          menu_item_id: item.item_id,
+          name: item.menu_item?.name || item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          options: [], // TODO: Load existing options
+          isNew: false,
+          isModified: false,
+        })
+      );
 
       setOrderItems(editableItems);
     } catch (error) {
-      message.error('ไม่สามารถโหลดข้อมูลได้');
+      message.error("ไม่สามารถโหลดข้อมูลได้");
     } finally {
       setLoading(false);
     }
   };
 
   const addNewItem = (values: any) => {
-    const selectedMenuItem = availableMenuItems.find(item => item.id === values.menu_item_id);
+    const selectedMenuItem = availableMenuItems.find(
+      (item) => item.id === values.menu_item_id
+    );
     if (!selectedMenuItem) return;
 
     const newItem: EditOrderItem = {
@@ -98,36 +112,38 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
       isNew: true,
     };
 
-    setOrderItems(prev => [...prev, newItem]);
+    setOrderItems((prev) => [...prev, newItem]);
     form.resetFields();
   };
 
   const updateQuantity = (index: number, newQuantity: number) => {
     if (newQuantity <= 0) return;
 
-    setOrderItems(prev => prev.map((item, i) => {
-      if (i === index) {
-        const newSubtotal = item.unit_price * newQuantity;
-        return {
-          ...item,
-          quantity: newQuantity,
-          subtotal: newSubtotal,
-          isModified: !item.isNew,
-        };
-      }
-      return item;
-    }));
+    setOrderItems((prev) =>
+      prev.map((item, i) => {
+        if (i === index) {
+          const newSubtotal = item.unit_price * newQuantity;
+          return {
+            ...item,
+            quantity: newQuantity,
+            subtotal: newSubtotal,
+            isModified: !item.isNew,
+          };
+        }
+        return item;
+      })
+    );
   };
 
   const removeItem = (index: number) => {
-    setOrderItems(prev => {
+    setOrderItems((prev) => {
       const item = prev[index];
       if (item.isNew) {
         // Remove new items completely
         return prev.filter((_, i) => i !== index);
       } else {
         // Mark existing items for deletion
-        return prev.map((item, i) => 
+        return prev.map((item, i) =>
           i === index ? { ...item, toDelete: true } : item
         );
       }
@@ -135,35 +151,36 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
   };
 
   const restoreItem = (index: number) => {
-    setOrderItems(prev => prev.map((item, i) => 
-      i === index ? { ...item, toDelete: false } : item
-    ));
+    setOrderItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, toDelete: false } : item))
+    );
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const itemsToManage = orderItems
-        .filter(item => !item.toDelete)
-        .map(item => ({
+        .filter((item) => !item.toDelete)
+        .map((item) => ({
           order_item_id: item.isNew ? undefined : item.id,
           menu_item_id: item.menu_item_id,
           quantity: item.quantity,
-          options: item.options?.map(opt => ({
-            option_id: opt.option_id,
-            option_val_id: opt.value_id,
-          })) || [],
-          action: item.isNew ? 'add' : (item.isModified ? 'update' : undefined),
+          options:
+            item.options?.map((opt) => ({
+              option_id: opt.option_id,
+              option_val_id: opt.value_id,
+            })) || [],
+          action: item.isNew ? "add" : item.isModified ? "update" : undefined,
         }));
 
       // Add items marked for deletion
       const itemsToDelete = orderItems
-        .filter(item => item.toDelete && !item.isNew)
-        .map(item => ({
+        .filter((item) => item.toDelete && !item.isNew)
+        .map((item) => ({
           order_item_id: item.id,
           menu_item_id: item.menu_item_id,
           quantity: 0, // Quantity 0 means delete
-          action: 'delete' as const,
+          action: "delete" as const,
         }));
 
       const allItems = [...itemsToManage, ...itemsToDelete];
@@ -175,10 +192,10 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
         });
       }
 
-      message.success('อัพเดทออเดอร์สำเร็จ');
+      message.success("อัพเดทออเดอร์สำเร็จ");
       onSave();
     } catch (error: any) {
-      message.error(error.message || 'เกิดข้อผิดพลาดในการบันทึก');
+      message.error(error.message || "เกิดข้อผิดพลาดในการบันทึก");
     } finally {
       setSaving(false);
     }
@@ -186,12 +203,12 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
 
   const calculateTotal = () => {
     return orderItems
-      .filter(item => !item.toDelete)
+      .filter((item) => !item.toDelete)
       .reduce((total, item) => total + item.subtotal, 0);
   };
 
-  const activeItems = orderItems.filter(item => !item.toDelete);
-  const deletedItems = orderItems.filter(item => item.toDelete);
+  const activeItems = orderItems.filter((item) => !item.toDelete);
+  const deletedItems = orderItems.filter((item) => item.toDelete);
 
   return (
     <Modal
@@ -219,52 +236,15 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
         <div className="space-y-4">
           {/* Add New Item Form */}
           <Card title="เพิ่มรายการใหม่" size="small">
-            <Form
-              form={form}
-              layout="inline"
-              onFinish={addNewItem}
-              className="w-full"
-            >
-              <Form.Item
-                name="menu_item_id"
-                rules={[{ required: true, message: 'กรุณาเลือกเมนู' }]}
-                className="flex-1"
-              >
-                <Select
-                  placeholder="เลือกเมนู"
-                  showSearch
-                  optionFilterProp="children"
-                  className="w-full"
-                >
-                  {availableMenuItems.map(item => (
-                    <Option key={item.id} value={item.id}>
-                      {item.name} - ฿{item.price.toLocaleString()}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              
-              <Form.Item
-                name="quantity"
-                rules={[{ required: true, message: 'กรุณาระบุจำนวน' }]}
-              >
-                <InputNumber
-                  min={1}
-                  placeholder="จำนวน"
-                  style={{ width: 100 }}
-                />
-              </Form.Item>
-              
-              <Form.Item>
-                <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                  เพิ่ม
-                </Button>
-              </Form.Item>
-            </Form>
+            <Link href={`/customer/${order?.uuid}/menu`}>
+              <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
+                เพิ่ม
+              </Button>
+            </Link>
           </Card>
 
           {/* Current Order Items */}
-          <Card 
+          <Card
             title={
               <div className="flex items-center justify-between">
                 <span>รายการในออเดอร์</span>
@@ -310,12 +290,8 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
                         okText="ลบ"
                         cancelText="ยกเลิก"
                       >
-                        <Button
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                        />
-                      </Popconfirm>
+                        <Button size="small" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>,
                     ]}
                   >
                     <List.Item.Meta
@@ -329,14 +305,16 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
                       description={
                         <div>
                           <Text type="secondary">
-                            ฿{item.unit_price.toLocaleString()} x {item.quantity}
+                            ฿{item.unit_price.toLocaleString()} x{" "}
+                            {item.quantity}
                           </Text>
                           {item.options && item.options.length > 0 && (
                             <div className="mt-1">
                               {item.options.map((option, i) => (
-                                <Tag key={i} >
+                                <Tag key={i}>
                                   {option.option_name}: {option.value_name}
-                                  {option.additional_price > 0 && ` (+฿${option.additional_price})`}
+                                  {option.additional_price > 0 &&
+                                    ` (+฿${option.additional_price})`}
                                 </Tag>
                               ))}
                             </div>
@@ -372,14 +350,15 @@ export default function EditOrderModal({ open, onCancel, onSave, order }: EditOr
                         onClick={() => restoreItem(orderItems.indexOf(item))}
                       >
                         คืนกลับ
-                      </Button>
+                      </Button>,
                     ]}
                   >
                     <List.Item.Meta
                       title={<Text delete>{item.name}</Text>}
                       description={
                         <Text delete type="secondary">
-                          ฿{item.unit_price.toLocaleString()} x {item.quantity} = ฿{item.subtotal.toLocaleString()}
+                          ฿{item.unit_price.toLocaleString()} x {item.quantity}{" "}
+                          = ฿{item.subtotal.toLocaleString()}
                         </Text>
                       }
                     />

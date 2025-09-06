@@ -26,16 +26,16 @@ import useSWR from "swr";
 import { customerService } from "@/services/customerService";
 import moment from "moment";
 import { useRouter, useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { OrderItemDetailResponse } from "@/types";
 const { Title, Paragraph, Text } = Typography;
 
 export default function OrderDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const orderId = parseInt(params?.id as string);
+  const uuid = params?.uuid as string;
   const [callStaffModal, setCallStaffModal] = useState(false);
-
+  const [orderId, setOrderId] = useState<number>(0);
   const {
     data: orderDetail,
     isLoading,
@@ -43,7 +43,15 @@ export default function OrderDetailPage() {
   } = useSWR(orderId ? `order-detail-${orderId}` : null, () =>
     customerService.getOrderDetail(orderId)
   );
-
+  useEffect(() => {
+    async function fetchOrderId() {
+      if (uuid) {
+        const data = await customerService.getOrderIdFromQRCode(uuid);
+        setOrderId(data.data);
+      }
+    }
+    fetchOrderId();
+  }, [uuid]);
   const order = orderDetail?.data;
 
   const getStatusColor = (status: string) => {
@@ -153,7 +161,7 @@ export default function OrderDetailPage() {
           <Paragraph>ออเดอร์ที่คุณค้นหาไม่มีอยู่ในระบบ</Paragraph>
           <Button
             type="primary"
-            onClick={() => router.push("/customer/orders")}
+            onClick={() => router.push(`{/customer/${uuid}/menu}`)}
           >
             กลับไปหน้าออเดอร์
           </Button>
@@ -170,7 +178,7 @@ export default function OrderDetailPage() {
           <Space className="mb-4">
             <Button
               icon={<ArrowLeftOutlined />}
-              onClick={() => router.push("/customer/menu")}
+              onClick={() => router.push(`/customer/${uuid}/menu`)}
             >
               กลับ
             </Button>
@@ -259,7 +267,10 @@ export default function OrderDetailPage() {
                         <Tag color="blue">{item.kitchen_station}</Tag>
                       )}
                       {item.status && (
-                        <Tag color={getItemStatusColor(item.status)} className="ml-2">
+                        <Tag
+                          color={getItemStatusColor(item.status)}
+                          className="ml-2"
+                        >
                           {getItemStatusText(item.status)}
                         </Tag>
                       )}

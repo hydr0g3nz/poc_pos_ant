@@ -806,7 +806,7 @@ export default function MenuPage() {
 
         // Navigate to order tracking
         if (result.orderId) {
-          router.push(`/customer/orders/${result.orderId}`);
+          router.push(`/customer/${order_uuid}/orders`);
         }
       }
     } catch (error) {

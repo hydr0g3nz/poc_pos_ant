@@ -1,7 +1,7 @@
 // src/app/customer/menu/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   Row,
@@ -23,6 +23,8 @@ import {
   Divider,
   Input,
   Select,
+  Form,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -31,456 +33,649 @@ import {
   MinusOutlined,
   CoffeeOutlined,
   LoadingOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMenu } from "@/hooks/useMenu";
-import { useMenuSelection } from "@/hooks/useMenuSelection";
 import { useCart } from "@/hooks/useCart";
 import { useOrderSubmit } from "@/hooks/useOrderSubmit";
-import { useMenuModal } from "@/hooks/useMenuItemModal";
-import { useCartDrawer } from "@/hooks/useCartDrawer";
+import { useMenuSelection } from "@/hooks/useMenuSelection";
 import { MenuUtils } from "@/utils/utils";
 import { MenuItem, CartItem, SelectedOption } from "@/types";
 
 const { Title, Paragraph } = Typography;
 
-// Component สำหรับ Search และ Filter
-const SearchAndFilter = ({ menu }: { menu: any }) => (
-  <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-    <Row gutter={[16, 16]} align="middle">
-      <Col xs={24} md={12}>
-        <Input.Search
-          placeholder="ค้นหาเมนูอาหาร..."
-          allowClear
-          enterButton={<SearchOutlined />}
-          size="large"
-          value={menu.searchQuery}
-          onChange={(e) => menu.search(e.target.value)}
-          onSearch={menu.search}
-        />
-      </Col>
-      <Col xs={24} md={8}>
-        <Select
-          placeholder="เลือกหมวดหมู่"
-          allowClear
-          size="large"
-          className="w-full"
-          value={menu.selectedCategory}
-          onChange={menu.filterByCategory}
-          options={menu.categories?.map((cat) => ({
-            label: cat.name,
-            value: cat.id,
-          }))}
-        />
-      </Col>
-      <Col xs={24} md={4}>
-        <Button size="large" onClick={menu.clearFilters}>
-          ล้างตัวกรอง
-        </Button>
-      </Col>
-    </Row>
-  </div>
-);
+// Constants
+const CONSTANTS = {
+  ITEMS_PER_PAGE: 12,
+  MAX_QUANTITY: 99,
+  MIN_QUANTITY: 1,
+  CARD_HEIGHT: 192, // 48 * 4 = h-48
+} as const;
 
-// Component สำหรับ Menu Item Card
-const MenuItemCard = ({
-  item,
-  onItemClick,
-  isLoading,
-}: {
-  item: MenuItem;
-  onItemClick: (item: MenuItem) => void;
-  isLoading: boolean;
-}) => (
-  <Card
-    hoverable
-    className="h-full"
-    cover={
-      <div className="h-48 bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
-        <CoffeeOutlined className="text-4xl text-orange-500" />
-      </div>
-    }
-    actions={[
-      <Button
-        key="add"
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={() => onItemClick(item)}
-        loading={isLoading}
-        disabled={isLoading}
-      >
-        เลือกเมนู
-      </Button>,
-    ]}
-  >
-    <Card.Meta
-      title={
-        <Space direction="vertical" className="w-full">
-          <div className="font-semibold text-lg">{item.name}</div>
-          <div className="flex flex-wrap gap-1">
-            {item.category && <Tag color="orange">{item.category}</Tag>}
-            {MenuUtils.hasOptions(item) && (
-              <Tag color="blue">มีตัวเลือก ({item.menu_option?.length})</Tag>
-            )}
-            {item.is_recommended && <Tag color="gold">แนะนำ</Tag>}
-          </div>
-        </Space>
-      }
-      description={
-        <Space direction="vertical" className="w-full">
-          <Paragraph ellipsis={{ rows: 2 }} className="text-gray-600 mb-2">
-            {item.description || "อาหารอร่อย รสชาติเยี่ยม"}
-          </Paragraph>
-          <div className="text-xl font-bold text-orange-600">
-            ฿{item.price?.toLocaleString()}
-          </div>
-        </Space>
-      }
-    />
-  </Card>
-);
+// Types for form values
+interface MenuFilterForm {
+  search?: string;
+  category?: number;
+}
 
-// Component สำหรับ Menu Grid
-const MenuGrid = ({
-  menu,
-  onItemClick,
-  isLoading,
-}: {
-  menu: any;
-  onItemClick: (item: MenuItem) => void;
-  isLoading: boolean;
-}) => (
-  <Spin spinning={menu.isLoading}>
-    {menu.menuItems?.items && menu.menuItems.items.length > 0 ? (
-      <Row gutter={[16, 16]}>
-        {menu.menuItems.items.map((item: MenuItem) => (
-          <Col key={item.id} xs={24} sm={12} md={8} lg={6}>
-            <MenuItemCard
-              item={item}
-              onItemClick={onItemClick}
-              isLoading={isLoading}
-            />
-          </Col>
-        ))}
-      </Row>
-    ) : (
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description="ไม่พบเมนูที่ค้นหา"
-      />
-    )}
-  </Spin>
-);
+interface MenuOptionForm {
+  quantity: number;
+  options: Record<number, number | number[]>;
+  specialNote?: string;
+}
 
-// Component สำหรับเลือก Option แต่ละตัว
-const OptionSelector = ({
-  menuOption,
-  selection,
-  index,
-}: {
-  menuOption: any;
-  selection: any;
-  index: number;
-}) => (
-  <div key={index} className="mb-6">
-    <div className="flex items-center mb-3">
-      <Title level={5} className="mb-0 mr-2">
-        {menuOption.option?.name}
-      </Title>
-      {menuOption.option?.isRequired && <Tag color="red">บังคับเลือก</Tag>}
-      <Tag color={menuOption.option?.type === "single" ? "blue" : "green"}>
-        {menuOption.option?.type === "single"
-          ? "เลือกได้ 1 ตัวเลือก"
-          : "เลือกได้หลายตัวเลือก"}
-      </Tag>
-    </div>
+// Memoized Components
+const SearchAndFilter = React.memo(
+  ({
+    menu,
+    onFilterChange,
+  }: {
+    menu: any;
+    onFilterChange: (values: MenuFilterForm) => void;
+  }) => {
+    const [form] = Form.useForm<MenuFilterForm>();
 
-    {menuOption.option?.type === "single" ? (
-      <Radio.Group
-        value={
-          selection.selectedOptions.find(
-            (opt) => opt.optionId === menuOption.option?.id
-          )?.valueId
-        }
-        onChange={(e) => {
-          const value = menuOption.option?.optionValues.find(
-            (v) => v.id === e.target.value
-          );
-          if (value && menuOption.option) {
-            selection.handleOptionChange(
-              menuOption.option.id,
-              value.id,
-              parseFloat(value.additionalPrice),
-              menuOption.option.type
-            );
-          }
-        }}
-        options={menuOption.option?.optionValues.map((value) => ({
-          label: (
-            <div className="flex justify-between items-center w-96">
-              <span>{value.name}</span>
-              <span className="ml-4">
-                {parseFloat(value.additionalPrice) > 0 ? (
-                  <span className="text-green-600">
-                    +฿
-                    {parseFloat(value.additionalPrice).toLocaleString()}
-                  </span>
-                ) : (
-                  <span className="text-gray-400">ฟรี</span>
-                )}
-              </span>
-            </div>
-          ),
-          value: value.id,
-        }))}
-      />
-    ) : (
-      <Checkbox.Group
-        value={selection.selectedOptions
-          .filter((opt) => opt.optionId === menuOption.option?.id)
-          .map((opt) => opt.valueId)}
-        onChange={(checkedValues) => {
-          // ลบตัวเลือกเดิมของ option นี้
-          const otherOptions = selection.selectedOptions.filter(
-            (opt) => opt.optionId !== menuOption.option?.id
-          );
+    const handleValuesChange = useCallback(
+      (_, allValues: MenuFilterForm) => {
+        onFilterChange(allValues);
+      },
+      [onFilterChange]
+    );
 
-          // เพิ่มตัวเลือกใหม่
-          const newOptions = checkedValues.map((valueId) => {
-            const value = menuOption.option?.optionValues.find(
-              (v) => v.id === valueId
-            );
-            return {
-              optionId: menuOption.option?.id || 0,
-              valueId: valueId as number,
-              additionalPrice: parseFloat(value?.additionalPrice || "0"),
-            };
-          });
-
-          // อัพเดท selection
-          selection.selectedOptions.splice(0);
-          selection.selectedOptions.push(...otherOptions, ...newOptions);
-        }}
-      >
-        <Space direction="vertical">
-          {menuOption.option?.optionValues.map((value) => (
-            <Checkbox key={value.id} value={value.id}>
-              <div className="flex justify-between items-center w-96">
-                <span>{value.name}</span>
-                <span className="ml-4">
-                  {parseFloat(value.additionalPrice) > 0 ? (
-                    <span className="text-green-600">
-                      +฿
-                      {parseFloat(value.additionalPrice).toLocaleString()}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">ฟรี</span>
-                  )}
-                </span>
-              </div>
-            </Checkbox>
-          ))}
-        </Space>
-      </Checkbox.Group>
-    )}
-  </div>
-);
-
-// Component สำหรับเนื้อหาใน Options Modal
-const OptionsModalContent = ({
-  selection,
-  onAddToCart,
-}: {
-  selection: any;
-  onAddToCart: () => void;
-}) => {
-  if (!selection.selectedItem) return null;
-
-  return (
-    <div>
-      <div className="mb-4">
-        <div className="w-full h-48 bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center rounded mb-4">
-          <CoffeeOutlined className="text-4xl text-orange-500" />
-        </div>
-        <Title level={4}>{selection.selectedItem.name}</Title>
-        <Paragraph>{selection.selectedItem.description}</Paragraph>
-        <div className="text-xl font-bold text-orange-600 mb-4">
-          ฿{selection.selectedItem.price.toLocaleString()}
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <span className="font-medium">จำนวน: </span>
-        <InputNumber
-          min={1}
-          value={selection.quantity}
-          onChange={(value) => selection.setItemQuantity(value || 1)}
-          className="ml-2"
-        />
-      </div>
-
-      <Divider />
-
-      {selection.selectedItem.menu_option?.length > 0 ? (
-        selection.selectedItem.menu_option.map((menuOption, index) => (
-          <OptionSelector
-            key={index}
-            menuOption={menuOption}
-            selection={selection}
-            index={index}
-          />
-        ))
-      ) : (
-        <div className="text-center py-4 text-gray-500">
-          เมนูนี้ไม่มีตัวเลือกเพิ่มเติม
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Component สำหรับแสดง Cart Item Options
-const CartItemOptions = ({ item }: { item: CartItem }) => {
-  if (!item.selectedOptions?.length && !item.optionsText) return null;
-
-  const optionsPrice = MenuUtils.calculateOptionsPrice(
-    item.selectedOptions || []
-  );
-
-  return (
-    <div className="text-xs text-gray-500 mt-1">
-      {item.optionsText && <div className="mb-1">{item.optionsText}</div>}
-      {optionsPrice > 0 && (
-        <div className="text-green-600">+฿{optionsPrice.toLocaleString()}</div>
-      )}
-    </div>
-  );
-};
-
-// Component สำหรับ Cart Item
-const CartItemComponent = ({
-  item,
-  index,
-  cart,
-}: {
-  item: CartItem;
-  index: number;
-  cart: any;
-}) => (
-  <Card>
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <div className="font-medium">{item.name}</div>
-        <div className="text-gray-500">
-          ฿{(item.price / item.quantity).toLocaleString()} x {item.quantity}
-        </div>
-        <CartItemOptions item={item} />
-      </div>
-      <div className="flex flex-col items-end space-y-2">
-        <div className="flex items-center space-x-2">
-          <Button
-            icon={<MinusOutlined />}
-            onClick={() => cart.updateQuantity(index, item.quantity - 1)}
-          />
-          <InputNumber
-            min={1}
-            value={item.quantity}
-            onChange={(value) => cart.updateQuantity(index, value || 1)}
-            className="w-16"
-          />
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => cart.updateQuantity(index, item.quantity + 1)}
-          />
-        </div>
-        <div className="text-orange-600 font-medium">
-          ฿{(item.price * item.quantity).toLocaleString()}
-        </div>
-      </div>
-    </div>
-  </Card>
-);
-
-// Component สำหรับเนื้อหาใน Cart Drawer
-const CartDrawerContent = ({
-  cart,
-  onCheckout,
-  isSubmitting,
-}: {
-  cart: any;
-  onCheckout: () => void;
-  isSubmitting: boolean;
-}) => (
-  <>
-    {!cart.summary.isEmpty ? (
-      <Space direction="vertical" className="w-full">
-        {cart.items.map((item, index) => (
-          <CartItemComponent
-            key={index}
-            item={item}
-            index={index}
-            cart={cart}
-          />
-        ))}
-      </Space>
-    ) : (
-      <Empty description="ไม่มีสินค้าในตะกร้า" />
-    )}
-  </>
-);
-
-// Component สำหรับ Floating Cart Button
-const FloatingCartButton = ({
-  cart,
-  onOpenDrawer,
-}: {
-  cart: any;
-  onOpenDrawer: () => void;
-}) => (
-  <Affix offsetBottom={20}>
-    <div className="flex justify-end">
-      <Badge count={cart.summary.totalQuantity} showZero={false}>
-        <Button
-          type="primary"
-          size="large"
-          icon={<ShoppingCartOutlined />}
-          onClick={onOpenDrawer}
-          className="shadow-lg"
+    return (
+      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+        <Form
+          form={form}
+          onValuesChange={handleValuesChange}
+          initialValues={{ search: "", category: undefined }}
         >
-          ตะกร้า {cart.summary.formattedPrice}
-        </Button>
-      </Badge>
-    </div>
-  </Affix>
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} md={12}>
+              <Form.Item name="search" className="mb-0">
+                <Input.Search
+                  placeholder="ค้นหาเมนูอาหาร..."
+                  allowClear
+                  enterButton={<SearchOutlined />}
+                  size="large"
+                  aria-label="ค้นหาเมนูอาหาร"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="category" className="mb-0">
+                <Select
+                  placeholder="เลือกหมวดหมู่"
+                  allowClear
+                  size="large"
+                  className="w-full"
+                  aria-label="เลือกหมวดหมู่อาหาร"
+                  options={menu.categories?.map((cat: any) => ({
+                    label: cat.name,
+                    value: cat.id,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4}>
+              <Button
+                size="large"
+                onClick={() => form.resetFields()}
+                aria-label="ล้างตัวกรอง"
+              >
+                ล้างตัวกรอง
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      </div>
+    );
+  }
 );
 
-// Component สำหรับ Loading Overlay
-const LoadingOverlay = ({ isLoading }: { isLoading: boolean }) => {
-  if (!isLoading) return null;
+const MenuItemCard = React.memo(
+  ({
+    item,
+    onItemClick,
+    isLoading,
+  }: {
+    item: MenuItem;
+    onItemClick: (item: MenuItem) => void;
+    isLoading: boolean;
+  }) => {
+    const handleClick = useCallback(() => {
+      onItemClick(item);
+    }, [item, onItemClick]);
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl flex items-center space-x-3">
-        <LoadingOutlined className="text-2xl text-orange-500" />
-        <span className="text-lg">กำลังโหลดรายละเอียดเมนู...</span>
+    return (
+      <Card
+        hoverable
+        className="h-full transition-all duration-200 hover:shadow-lg"
+        cover={
+          <div
+            className="bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center"
+            style={{ height: CONSTANTS.CARD_HEIGHT }}
+            role="img"
+            aria-label={`รูปภาพของ ${item.name}`}
+          >
+            <CoffeeOutlined className="text-4xl text-orange-500" />
+          </div>
+        }
+        actions={[
+          <Button
+            key="add"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleClick}
+            loading={isLoading}
+            disabled={isLoading}
+            aria-label={`เลือกเมนู ${item.name}`}
+          >
+            เลือกเมนู
+          </Button>,
+        ]}
+      >
+        <Card.Meta
+          title={
+            <Space direction="vertical" className="w-full">
+              <div className="font-semibold text-lg">{item.name}</div>
+              <div className="flex flex-wrap gap-1">
+                {item.category && <Tag color="orange">{item.category}</Tag>}
+                {MenuUtils.hasOptions(item) && (
+                  <Tag color="blue">
+                    มีตัวเลือก ({item.menu_option?.length})
+                  </Tag>
+                )}
+                {item.is_recommended && <Tag color="gold">แนะนำ</Tag>}
+              </div>
+            </Space>
+          }
+          description={
+            <Space direction="vertical" className="w-full">
+              <Paragraph ellipsis={{ rows: 2 }} className="text-gray-600 mb-2">
+                {item.description || "อาหารอร่อย รสชาติเยี่ยม"}
+              </Paragraph>
+              <div className="text-xl font-bold text-orange-600">
+                ฿{item.price?.toLocaleString()}
+              </div>
+            </Space>
+          }
+        />
+      </Card>
+    );
+  }
+);
+
+const MenuGrid = React.memo(
+  ({
+    menu,
+    onItemClick,
+    isLoading,
+  }: {
+    menu: any;
+    onItemClick: (item: MenuItem) => void;
+    isLoading: boolean;
+  }) => (
+    <Spin spinning={menu.isLoading} tip="กำลังโหลดเมนู...">
+      {menu.menuItems?.items && menu.menuItems.items.length > 0 ? (
+        <Row gutter={[16, 16]}>
+          {menu.menuItems.items.map((item: MenuItem) => (
+            <Col key={item.id} xs={24} sm={12} md={8} lg={6}>
+              <MenuItemCard
+                item={item}
+                onItemClick={onItemClick}
+                isLoading={isLoading}
+              />
+            </Col>
+          ))}
+        </Row>
+      ) : (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="ไม่พบเมนูที่ค้นหา"
+        />
+      )}
+    </Spin>
+  )
+);
+
+// Form-based Option Selector
+const OptionFormGroup = React.memo(
+  ({ menuOption, form }: { menuOption: any; form: any }) => {
+    const optionId = menuOption.option?.id;
+    const isRequired = menuOption.option?.isRequired;
+    const isSingle = menuOption.option?.type === "single";
+
+    const validationRules = useMemo(
+      () => [
+        ...(isRequired
+          ? [
+              {
+                required: true,
+                message: `กรุณาเลือก${menuOption.option?.name}`,
+              },
+            ]
+          : []),
+      ],
+      [isRequired, menuOption.option?.name]
+    );
+
+    return (
+      <div className="mb-6">
+        <div className="flex items-center mb-3">
+          <Title level={5} className="mb-0 mr-2">
+            {menuOption.option?.name}
+          </Title>
+          {isRequired && <Tag color="red">บังคับเลือก</Tag>}
+          <Tag color={isSingle ? "blue" : "green"}>
+            {isSingle ? "เลือกได้ 1 ตัวเลือก" : "เลือกได้หลายตัวเลือก"}
+          </Tag>
+        </div>
+
+        <Form.Item
+          name={["options", optionId]}
+          rules={validationRules}
+          className="mb-0"
+        >
+          {isSingle ? (
+            <Radio.Group
+              options={menuOption.option?.optionValues.map((value: any) => ({
+                label: (
+                  <div className="flex justify-between items-center w-96">
+                    <span>{value.name}</span>
+                    <span className="ml-4">
+                      {parseFloat(value.additionalPrice) > 0 ? (
+                        <span className="text-green-600">
+                          +฿{parseFloat(value.additionalPrice).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">ฟรี</span>
+                      )}
+                    </span>
+                  </div>
+                ),
+                value: value.id,
+              }))}
+            />
+          ) : (
+            <Checkbox.Group>
+              <Space direction="vertical">
+                {menuOption.option?.optionValues.map((value: any) => (
+                  <Checkbox key={value.id} value={value.id}>
+                    <div className="flex justify-between items-center w-96">
+                      <span>{value.name}</span>
+                      <span className="ml-4">
+                        {parseFloat(value.additionalPrice) > 0 ? (
+                          <span className="text-green-600">
+                            +฿
+                            {parseFloat(value.additionalPrice).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">ฟรี</span>
+                        )}
+                      </span>
+                    </div>
+                  </Checkbox>
+                ))}
+              </Space>
+            </Checkbox.Group>
+          )}
+        </Form.Item>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+// Price Calculator Component
+const PriceCalculator = React.memo(
+  ({
+    basePrice,
+    form,
+    selectedItem,
+  }: {
+    basePrice: number;
+    form: any;
+    selectedItem: MenuItem;
+  }) => {
+    const watchedValues = Form.useWatch([], form);
+
+    const calculatedPrice = useMemo(() => {
+      if (!watchedValues?.options || !selectedItem?.menu_option)
+        return basePrice;
+
+      let additionalPrice = 0;
+      const options = watchedValues.options;
+
+      selectedItem.menu_option.forEach((menuOption: any) => {
+        const optionId = menuOption.option?.id;
+        const selectedValue = options[optionId];
+
+        if (selectedValue) {
+          if (Array.isArray(selectedValue)) {
+            // Multiple selection
+            selectedValue.forEach((valueId: number) => {
+              const value = menuOption.option?.optionValues.find(
+                (v: any) => v.id === valueId
+              );
+              if (value) {
+                additionalPrice += parseFloat(value.additionalPrice || "0");
+              }
+            });
+          } else {
+            // Single selection
+            const value = menuOption.option?.optionValues.find(
+              (v: any) => v.id === selectedValue
+            );
+            if (value) {
+              additionalPrice += parseFloat(value.additionalPrice || "0");
+            }
+          }
+        }
+      });
+
+      return basePrice + additionalPrice;
+    }, [basePrice, watchedValues?.options, selectedItem?.menu_option]);
+
+    const quantity = watchedValues?.quantity || 1;
+    const totalPrice = calculatedPrice * quantity;
+
+    return (
+      <div className="bg-gray-50 p-3 rounded">
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>ราคาพื้นฐาน:</span>
+          <span>฿{basePrice.toLocaleString()}</span>
+        </div>
+        {calculatedPrice > basePrice && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>ตัวเลือกเพิ่มเติม:</span>
+            <span>+฿{(calculatedPrice - basePrice).toLocaleString()}</span>
+          </div>
+        )}
+        <Divider className="my-2" />
+        <div className="flex justify-between font-medium">
+          <span>รวมต่อชิ้น:</span>
+          <span>฿{calculatedPrice.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg text-orange-600">
+          <span>รวมทั้งหมด:</span>
+          <span>฿{totalPrice.toLocaleString()}</span>
+        </div>
+      </div>
+    );
+  }
+);
+
+// Modal Content with Form
+const OptionsModalContent = React.memo(
+  ({
+    selectedItem,
+    onSubmit,
+    form,
+  }: {
+    selectedItem: MenuItem;
+    onSubmit: (values: MenuOptionForm) => void;
+    form: any;
+  }) => {
+    if (!selectedItem) return null;
+
+    return (
+      <Form
+        form={form}
+        onFinish={onSubmit}
+        initialValues={{
+          quantity: CONSTANTS.MIN_QUANTITY,
+          options: {},
+          specialNote: "",
+        }}
+      >
+        <div className="mb-4">
+          <div
+            className="w-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center rounded mb-4"
+            style={{ height: CONSTANTS.CARD_HEIGHT }}
+          >
+            <CoffeeOutlined className="text-4xl text-orange-500" />
+          </div>
+          <Title level={4}>{selectedItem.name}</Title>
+          <Paragraph>{selectedItem.description}</Paragraph>
+          <div className="text-xl font-bold text-orange-600 mb-4">
+            ฿{selectedItem.price.toLocaleString()}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="font-medium">จำนวน: </label>
+          <Form.Item
+            name="quantity"
+            rules={[
+              { required: true, message: "กรุณาระบุจำนวน" },
+              {
+                type: "number",
+                min: CONSTANTS.MIN_QUANTITY,
+                max: CONSTANTS.MAX_QUANTITY,
+              },
+            ]}
+            className="inline-block ml-2 mb-0"
+          >
+            <InputNumber
+              min={CONSTANTS.MIN_QUANTITY}
+              max={CONSTANTS.MAX_QUANTITY}
+              aria-label="จำนวนที่ต้องการสั่ง"
+            />
+          </Form.Item>
+        </div>
+
+        <Divider />
+
+        {selectedItem.menu_option?.length > 0 ? (
+          selectedItem.menu_option.map((menuOption: any, index: number) => (
+            <OptionFormGroup
+              key={menuOption.option?.id || index}
+              menuOption={menuOption}
+              form={form}
+            />
+          ))
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            เมนูนี้ไม่มีตัวเลือกเพิ่มเติม
+          </div>
+        )}
+
+        <Divider />
+
+        <div className="mb-4">
+          <Form.Item name="specialNote" label="หมายเหตุพิเศษ" className="mb-0">
+            <Input.TextArea
+              rows={2}
+              placeholder="เช่น ไม่เผ็ด, ไม่ใส่หัวหอม"
+              maxLength={200}
+              showCount
+              aria-label="หมายเหตุพิเศษสำหรับเมนูนี้"
+            />
+          </Form.Item>
+        </div>
+
+        <PriceCalculator
+          basePrice={selectedItem.price}
+          form={form}
+          selectedItem={selectedItem}
+        />
+      </Form>
+    );
+  }
+);
+
+// Cart Item with optimistic updates
+const CartItemComponent = React.memo(
+  ({
+    item,
+    index,
+    onUpdateQuantity,
+    onRemove,
+  }: {
+    item: CartItem;
+    index: number;
+    onUpdateQuantity: (index: number, quantity: number) => void;
+    onRemove: (index: number) => void;
+  }) => {
+    const handleQuantityChange = useCallback(
+      (quantity: number) => {
+        if (quantity <= 0) {
+          onRemove(index);
+        } else {
+          onUpdateQuantity(index, quantity);
+        }
+      },
+      [index, onUpdateQuantity, onRemove]
+    );
+
+    const optionsPrice = useMemo(
+      () => MenuUtils.calculateOptionsPrice(item.selectedOptions || []),
+      [item.selectedOptions]
+    );
+
+    return (
+      <Card className="mb-3">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="font-medium">{item.name}</div>
+            <div className="text-gray-500">
+              ฿{(item.price / item.quantity).toLocaleString()} x {item.quantity}
+            </div>
+            {item.optionsText && (
+              <div className="text-xs text-gray-500 mt-1">
+                {item.optionsText}
+              </div>
+            )}
+            {optionsPrice > 0 && (
+              <div className="text-xs text-green-600">
+                +฿{optionsPrice.toLocaleString()}
+              </div>
+            )}
+            {item.specialNote && (
+              <div className="text-xs text-blue-600 mt-1">
+                หมายเหตุ: {item.specialNote}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end space-y-2">
+            <div className="flex items-center space-x-2">
+              <Button
+                icon={<MinusOutlined />}
+                size="small"
+                onClick={() => handleQuantityChange(item.quantity - 1)}
+                aria-label="ลดจำนวน"
+              />
+              <InputNumber
+                min={1}
+                max={CONSTANTS.MAX_QUANTITY}
+                value={item.quantity}
+                onChange={(value) => handleQuantityChange(value || 1)}
+                className="w-16"
+                size="small"
+              />
+              <Button
+                icon={<PlusOutlined />}
+                size="small"
+                onClick={() => handleQuantityChange(item.quantity + 1)}
+                aria-label="เพิ่มจำนวน"
+              />
+            </div>
+            <div className="text-orange-600 font-medium">
+              ฿{(item.price * item.quantity).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+);
+
+const CartDrawerContent = React.memo(
+  ({
+    cart,
+    onCheckout,
+    isSubmitting,
+  }: {
+    cart: any;
+    onCheckout: () => void;
+    isSubmitting: boolean;
+  }) => {
+    const handleUpdateQuantity = useCallback(
+      (index: number, quantity: number) => {
+        cart.updateQuantity(index, quantity);
+      },
+      [cart]
+    );
+
+    const handleRemoveItem = useCallback(
+      (index: number) => {
+        cart.removeItem(index);
+      },
+      [cart]
+    );
+
+    return (
+      <>
+        {!cart.summary.isEmpty ? (
+          <Space direction="vertical" className="w-full">
+            {cart.items.map((item: CartItem, index: number) => (
+              <CartItemComponent
+                key={`${item.id}-${index}`}
+                item={item}
+                index={index}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemove={handleRemoveItem}
+              />
+            ))}
+          </Space>
+        ) : (
+          <Empty description="ไม่มีสินค้าในตะกร้า" />
+        )}
+      </>
+    );
+  }
+);
+
+const FloatingCartButton = React.memo(
+  ({ cart, onOpenDrawer }: { cart: any; onOpenDrawer: () => void }) => (
+    <Affix offsetBottom={20}>
+      <div className="flex justify-end">
+        <Badge count={cart.summary.totalQuantity} showZero={false}>
+          <Button
+            type="primary"
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            onClick={onOpenDrawer}
+            className="shadow-lg"
+            aria-label={`เปิดตะกร้าสินค้า มีสินค้า ${cart.summary.totalQuantity} รายการ`}
+          >
+            ตะกร้า {cart.summary.formattedPrice}
+          </Button>
+        </Badge>
+      </div>
+    </Affix>
+  )
+);
 
 // Main Component
 export default function MenuPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // State
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [isItemLoading, setIsItemLoading] = useState(false);
+
   // Hooks
-  const menu = useMenu({ isAdmin: false, limit: 12 });
-  const selection = useMenuSelection(false);
+  const menu = useMenu({ isAdmin: false, limit: CONSTANTS.ITEMS_PER_PAGE });
   const cart = useCart();
   const orderSubmit = useOrderSubmit();
-  const modal = useMenuModal();
-  const drawer = useCartDrawer();
+  const menuSelection = useMenuSelection(false);
+  // Form
+  const [optionForm] = Form.useForm<MenuOptionForm>();
 
   // Initialize category from URL params
   useEffect(() => {
@@ -488,66 +683,148 @@ export default function MenuPage() {
     if (categoryParam && !isNaN(Number(categoryParam))) {
       menu.filterByCategory(Number(categoryParam));
     }
-  }, [searchParams]);
+  }, [searchParams, menu.filterByCategory]);
 
-  // จัดการการคลิกเมนู
-  const handleItemClick = async (item: MenuItem) => {
-    const itemSelected = await selection.selectMenuItem(item);
-    if (!itemSelected) return;
+  // Handlers
+  const handleFilterChange = useCallback(
+    (values: MenuFilterForm) => {
+      if (values.search !== undefined) {
+        menu.search(values.search);
+      }
+      if (values.category !== undefined) {
+        menu.filterByCategory(values.category);
+      }
+    },
+    [menu.search, menu.filterByCategory]
+  );
 
-    if (MenuUtils.hasOptions(itemSelected)) {
-      modal.openModal(itemSelected);
-    } else {
-      // เพิ่มเข้าตะกร้าเลยถ้าไม่มี options
-      cart.addItem(item, [], 1);
-    }
-  };
+  const handleItemClick = useCallback(
+    async (item: MenuItem) => {
+      setIsItemLoading(true);
+      try {
+        const itemSelected = await menuSelection.selectMenuItem(item);
+        if (!itemSelected) return;
 
-  // จัดการการเพิ่มเข้าตะกร้าพร้อมตัวเลือก
-  const handleAddToCartWithOptions = () => {
-    if (!selection.selectedItem) return;
+        setSelectedItem(itemSelected);
 
-    const validation = selection.validation;
-    if (!validation.isValid) {
-      validation.errors.forEach((error) => message.error(error));
-      return;
-    }
+        if (MenuUtils.hasOptions(itemSelected)) {
+          setIsModalVisible(true);
+          optionForm.resetFields();
+        } else {
+          // Add to cart directly with optimistic update
+          cart.addItem(item, [], 1);
+          message.success(`เพิ่ม ${itemSelected.name} ลงตะกร้าแล้ว`);
+        }
+      } catch (error) {
+        message.error("เกิดข้อผิดพลาดในการโหลดรายละเอียดเมนู");
+      } finally {
+        setIsItemLoading(false);
+      }
+    },
+    [cart, optionForm]
+  );
 
-    cart.addItem(
-      selection.selectedItem,
-      selection.selectedOptions,
-      selection.quantity
-    );
+  const handleModalSubmit = useCallback(
+    (values: MenuOptionForm) => {
+      if (!selectedItem) return;
 
-    modal.closeModal();
-    selection.clearSelection();
-  };
+      try {
+        // Transform form values to cart format
+        const selectedOptions: SelectedOption[] = [];
 
-  // จัดการการ checkout
-  const handleCheckout = async () => {
+        if (values.options && selectedItem.menu_option) {
+          selectedItem.menu_option.forEach((menuOption: any) => {
+            const optionId = menuOption.option?.id;
+            const selectedValue = values.options[optionId];
+
+            if (selectedValue) {
+              if (Array.isArray(selectedValue)) {
+                selectedValue.forEach((valueId: number) => {
+                  const value = menuOption.option?.optionValues.find(
+                    (v: any) => v.id === valueId
+                  );
+                  if (value) {
+                    selectedOptions.push({
+                      optionId,
+                      valueId,
+                      additionalPrice: parseFloat(value.additionalPrice || "0"),
+                    });
+                  }
+                });
+              } else {
+                const value = menuOption.option?.optionValues.find(
+                  (v: any) => v.id === selectedValue
+                );
+                if (value) {
+                  selectedOptions.push({
+                    optionId,
+                    valueId: selectedValue,
+                    additionalPrice: parseFloat(value.additionalPrice || "0"),
+                  });
+                }
+              }
+            }
+          });
+        }
+
+        // Add to cart with optimistic update
+        cart.addItem(
+          selectedItem,
+          selectedOptions,
+          values.quantity,
+          values.specialNote
+        );
+
+        message.success(`เพิ่ม ${selectedItem.name} ลงตะกร้าแล้ว`);
+        setIsModalVisible(false);
+        setSelectedItem(null);
+      } catch (error) {
+        message.error("เกิดข้อผิดพลาดในการเพิ่มลงตะกร้า");
+      }
+    },
+    [selectedItem, cart]
+  );
+
+  const handleCheckout = useCallback(async () => {
     if (cart.summary.isEmpty) {
       message.warning("กรุณาเลือกรายการอาหารก่อน");
       return;
     }
 
     try {
-      // ในอนาคตจะได้ orderId จากการสแกน QR หรือ create order
-      const mockOrderId = 6; // ต้องแทนที่ด้วย logic จริง
+      // Get order ID from QR scan or create new order
+      // const orderId = await orderSubmit.getOrCreateOrderId();
 
-      const result = await orderSubmit.submitOrder(mockOrderId, cart.items);
+      const result = await orderSubmit.submitOrder(5, cart.items);
 
       if (result.success) {
         cart.clearCart();
-        drawer.closeDrawer();
-
-        // ไปหน้าติดตามออเดอร์ (ถ้ามี)
+        setIsDrawerVisible(false);
         message.success("สั่งอาหารสำเร็จ!");
-        // router.push(`/customer/orders/${result.orderId}`);
+
+        // Navigate to order tracking
+        if (result.orderId) {
+          router.push(`/customer/orders/${result.orderId}`);
+        }
       }
     } catch (error) {
       message.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     }
-  };
+  }, [cart, orderSubmit, router]);
+
+  const handleModalCancel = useCallback(() => {
+    setIsModalVisible(false);
+    setSelectedItem(null);
+    optionForm.resetFields();
+  }, [optionForm]);
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerVisible(false);
+  }, []);
+
+  const handleDrawerOpen = useCallback(() => {
+    setIsDrawerVisible(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -559,63 +836,55 @@ export default function MenuPage() {
         </div>
 
         {/* Search and Filter */}
-        <SearchAndFilter menu={menu} />
-
-        {/* Loading overlay */}
-        <LoadingOverlay isLoading={selection.isLoading} />
+        <SearchAndFilter menu={menu} onFilterChange={handleFilterChange} />
 
         {/* Menu Items */}
         <MenuGrid
           menu={menu}
           onItemClick={handleItemClick}
-          isLoading={selection.isLoading}
+          isLoading={isItemLoading}
         />
 
         {/* Options Modal */}
         <Modal
-          title={`เลือกตัวเลือกสำหรับ ${selection.selectedItem?.name || ""}`}
-          open={modal.isVisible}
-          onCancel={() => {
-            modal.closeModal();
-            selection.clearSelection();
-          }}
+          title={`เลือกตัวเลือกสำหรับ ${selectedItem?.name || ""}`}
+          open={isModalVisible}
+          onCancel={handleModalCancel}
           footer={[
-            <Button
-              key="cancel"
-              onClick={() => {
-                modal.closeModal();
-                selection.clearSelection();
-              }}
-            >
+            <Button key="cancel" onClick={handleModalCancel}>
               ยกเลิก
             </Button>,
             <Button
-              key="add"
+              key="submit"
               type="primary"
-              onClick={handleAddToCartWithOptions}
-              disabled={!selection.validation.isValid}
+              onClick={() => optionForm.submit()}
+              loading={isItemLoading}
             >
-              เพิ่มลงตะกร้า - ฿{selection.totalPrice.toLocaleString()}
+              เพิ่มลงตะกร้า
             </Button>,
           ]}
           width={600}
+          destroyOnClose
         >
-          <OptionsModalContent
-            selection={selection}
-            onAddToCart={handleAddToCartWithOptions}
-          />
+          {selectedItem && (
+            <OptionsModalContent
+              selectedItem={selectedItem}
+              onSubmit={handleModalSubmit}
+              form={optionForm}
+            />
+          )}
         </Modal>
 
         {/* Floating Cart Button */}
-        <FloatingCartButton cart={cart} onOpenDrawer={drawer.openDrawer} />
+        <FloatingCartButton cart={cart} onOpenDrawer={handleDrawerOpen} />
 
         {/* Cart Drawer */}
         <Drawer
-          title="ตะกร้าสินค้า"
+          title={`ตะกร้าสินค้า (${cart.summary.totalQuantity} รายการ)`}
           placement="right"
           size="large"
-          onClose={drawer.closeDrawer}
-          open={drawer.isVisible}
+          onClose={handleDrawerClose}
+          open={isDrawerVisible}
           footer={
             <div className="flex justify-between items-center">
               <div className="text-xl font-bold">
@@ -627,6 +896,7 @@ export default function MenuPage() {
                 onClick={handleCheckout}
                 disabled={cart.summary.isEmpty}
                 loading={orderSubmit.isSubmitting}
+                aria-label={`สั่งอาหาร ${cart.summary.totalQuantity} รายการ`}
               >
                 สั่งอาหาร ({cart.summary.totalQuantity} รายการ)
               </Button>

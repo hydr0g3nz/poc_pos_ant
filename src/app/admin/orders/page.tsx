@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Space, 
-  Tag, 
+import {
+  Card,
+  Table,
+  Button,
+  Space,
+  Tag,
   Typography,
   Select,
   DatePicker,
@@ -21,11 +21,11 @@ import {
   Drawer,
   Form,
   InputNumber,
-  Radio
-} from 'antd';
-import { 
-  EyeOutlined, 
-  PrinterOutlined, 
+  Radio,
+} from "antd";
+import {
+  EyeOutlined,
+  PrinterOutlined,
   ReloadOutlined,
   ShoppingCartOutlined,
   DollarOutlined,
@@ -34,18 +34,19 @@ import {
   CalculatorOutlined,
   CreditCardOutlined,
   ExclamationCircleOutlined,
-  EditOutlined 
-} from '@ant-design/icons';
-import { useState } from 'react';
-import useSWR, { mutate } from 'swr';
-import { adminService } from '@/services/adminService';
-import moment from 'moment';
-import EditOrderModal from '@/components/admin/EditOrderModal'; // เพิ่ม import
+  EditOutlined,
+} from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import useSWR, { mutate } from "swr";
+import { adminService } from "@/services/adminService";
+import moment from "moment";
+import EditOrderModal from "@/components/admin/EditOrderModal"; // เพิ่ม import
+import { useSearchParams } from "next/navigation";
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function OrdersManagement() {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -54,25 +55,38 @@ export default function OrdersManagement() {
   const [orderTotal, setOrderTotal] = useState<any>(null);
   const [loadingOrderId, setLoadingOrderId] = useState<number | null>(null);
   const [paymentForm] = Form.useForm();
- const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
-  const { data: orders, isLoading } = useSWR('admin-orders', () =>
+  const searchParams = useSearchParams();
+  const [orderId , setOrderId] = useState<number>(0);
+  const { data: orders, isLoading } = useSWR("admin-orders", () =>
     adminService.getOrders(50, 0)
   );
+  useEffect(() => {
+    const paramOrderId = searchParams?.get("order_id");
+    if (paramOrderId) {
+      setOrderId(parseInt(paramOrderId));
+    }
+  }, [searchParams]);
+  useEffect(() => {
+    if (orderId && orderId > 0) {
+      handleEditOrder(orderId);
+    }
+  }, [orderId]);
   const handleEditOrder = async (orderId: number) => {
     try {
       const response = await adminService.getOrderWithItems(orderId);
       setEditingOrder(response.data);
       setIsEditModalOpen(true);
     } catch (error) {
-      message.error('ไม่สามารถโหลดรายละเอียดออเดอร์ได้');
+      message.error("ไม่สามารถโหลดรายละเอียดออเดอร์ได้");
     }
   };
-    const handleEditSaved = () => {
+  const handleEditSaved = () => {
     setIsEditModalOpen(false);
     setEditingOrder(null);
-    mutate('admin-orders');
-    message.success('แก้ไขออเดอร์สำเร็จ');
+    mutate("admin-orders");
+    message.success("แก้ไขออเดอร์สำเร็จ");
   };
   const handleViewDetail = async (orderId: number) => {
     try {
@@ -80,7 +94,7 @@ export default function OrdersManagement() {
       setSelectedOrder(response.data);
       setIsDetailModalOpen(true);
     } catch (error) {
-      message.error('ไม่สามารถโหลดรายละเอียดออเดอร์ได้');
+      message.error("ไม่สามารถโหลดรายละเอียดออเดอร์ได้");
     }
   };
 
@@ -89,14 +103,14 @@ export default function OrdersManagement() {
       setLoadingOrderId(orderId);
       const [orderResponse, totalResponse] = await Promise.all([
         adminService.getOrderWithItems(orderId),
-        adminService.calculateOrderTotal(orderId)
+        adminService.calculateOrderTotal(orderId),
       ]);
-      
+
       setSelectedOrder(orderResponse.data);
       setOrderTotal(totalResponse.data);
       setIsBillModalOpen(true);
     } catch (error: any) {
-      message.error(error.message || 'ไม่สามารถคำนวณยอดรวมได้');
+      message.error(error.message || "ไม่สามารถคำนวณยอดรวมได้");
     } finally {
       setLoadingOrderId(null);
     }
@@ -106,10 +120,10 @@ export default function OrdersManagement() {
     try {
       setLoadingOrderId(orderId);
       await adminService.cancelOrder(orderId);
-      message.success('ยกเลิกออเดอร์สำเร็จ');
-      mutate('admin-orders');
+      message.success("ยกเลิกออเดอร์สำเร็จ");
+      mutate("admin-orders");
     } catch (error: any) {
-      message.error(error.message || 'เกิดข้อผิดพลาดในการยกเลิกออเดอร์');
+      message.error(error.message || "เกิดข้อผิดพลาดในการยกเลิกออเดอร์");
     } finally {
       setLoadingOrderId(null);
     }
@@ -119,10 +133,10 @@ export default function OrdersManagement() {
     try {
       setLoadingOrderId(orderId);
       await adminService.updateOrderStatus(orderId, { status: newStatus });
-      message.success('อัพเดทสถานะสำเร็จ');
-      mutate('admin-orders');
+      message.success("อัพเดทสถานะสำเร็จ");
+      mutate("admin-orders");
     } catch (error: any) {
-      message.error(error.message || 'เกิดข้อผิดพลาดในการอัพเดทสถานะ');
+      message.error(error.message || "เกิดข้อผิดพลาดในการอัพเดทสถานะ");
     } finally {
       setLoadingOrderId(null);
     }
@@ -131,88 +145,95 @@ export default function OrdersManagement() {
   const handleProcessPayment = async (values: any) => {
     try {
       if (!orderTotal) return;
-      
+
       await adminService.processPayment({
         order_id: orderTotal.order_id,
         amount: orderTotal.total,
-        method: values.method
+        method: values.method,
       });
-      
-      message.success('ชำระเงินสำเร็จ');
+
+      message.success("ชำระเงินสำเร็จ");
       setIsPaymentDrawerOpen(false);
       setIsBillModalOpen(false);
       paymentForm.resetFields();
-      mutate('admin-orders');
+      mutate("admin-orders");
     } catch (error: any) {
-      message.error(error.message || 'เกิดข้อผิดพลาดในการชำระเงิน');
+      message.error(error.message || "เกิดข้อผิดพลาดในการชำระเงิน");
     }
   };
 
   const handlePrintReceipt = async (orderId: number) => {
     try {
       await adminService.printOrderReceipt(orderId);
-      message.success('ส่งคำสั่งพิมพ์ใบเสร็จแล้ว');
+      message.success("ส่งคำสั่งพิมพ์ใบเสร็จแล้ว");
     } catch (error: any) {
-      message.error(error.message || 'เกิดข้อผิดพลาดในการพิมพ์ใบเสร็จ');
+      message.error(error.message || "เกิดข้อผิดพลาดในการพิมพ์ใบเสร็จ");
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'processing';
-      case 'closed': return 'success';
-      case 'cancelled': return 'error';
-      default: return 'default';
+      case "open":
+        return "processing";
+      case "closed":
+        return "success";
+      case "cancelled":
+        return "error";
+      default:
+        return "default";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'open': return 'กำลังดำเนินการ';
-      case 'closed': return 'เสร็จสิ้น';
-      case 'cancelled': return 'ยกเลิก';
-      default: return status;
+      case "open":
+        return "กำลังดำเนินการ";
+      case "closed":
+        return "เสร็จสิ้น";
+      case "cancelled":
+        return "ยกเลิก";
+      default:
+        return status;
     }
   };
 
   const columns = [
     {
-      title: 'ออเดอร์',
-      dataIndex: 'id',
-      key: 'id',
+      title: "ออเดอร์",
+      dataIndex: "id",
+      key: "id",
       render: (id: number) => `#${id}`,
     },
     {
-      title: 'โต๊ะ',
-      dataIndex: 'table_id',
-      key: 'table_id',
+      title: "โต๊ะ",
+      dataIndex: "table_id",
+      key: "table_id",
       render: (tableId: number) => `โต๊ะ ${tableId}`,
     },
     {
-      title: 'สถานะ',
-      dataIndex: 'status',
-      key: 'status',
+      title: "สถานะ",
+      dataIndex: "status",
+      key: "status",
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
-          {getStatusText(status)}
-        </Tag>
+        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
       ),
     },
     {
-      title: 'เวลาสั่ง',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) => moment(date).format('DD/MM/YYYY HH:mm'),
+      title: "เวลาสั่ง",
+      dataIndex: "created_at",
+      key: "created_at",
+      render: (date: string) => moment(date).format("DD/MM/YYYY HH:mm"),
     },
     {
-      title: 'เวลาปิด',
-      dataIndex: 'closed_at',
-      key: 'closed_at',
-      render: (date: string) => date ? moment(date).format('DD/MM/YYYY HH:mm') : '-',
+      title: "เวลาปิด",
+      dataIndex: "closed_at",
+      key: "closed_at",
+      render: (date: string) =>
+        date ? moment(date).format("DD/MM/YYYY HH:mm") : "-",
     },
-{
-      title: 'การดำเนินการ',
-      key: 'action',
+    {
+      title: "การดำเนินการ",
+      key: "action",
       width: 450, // เพิ่มความกว้าง
       render: (_: any, record: any) => (
         <Space wrap>
@@ -224,7 +245,7 @@ export default function OrdersManagement() {
             ดู
           </Button>
 
-          {record.status === 'open' && (
+          {record.status === "open" && (
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -234,7 +255,7 @@ export default function OrdersManagement() {
               แก้ไข
             </Button>
           )}
-          
+
           <Button
             size="small"
             icon={<CalculatorOutlined />}
@@ -246,21 +267,21 @@ export default function OrdersManagement() {
             เช็คบิล
           </Button>
 
-          {record.status === 'open' && (
+          {record.status === "open" && (
             <>
               <Button
                 size="small"
                 type="primary"
                 loading={loadingOrderId === record.id}
-                onClick={() => handleUpdateStatus(record.id, 'closed')}
+                onClick={() => handleUpdateStatus(record.id, "closed")}
               >
                 ปิดออเดอร์
               </Button>
-              
+
               <Popconfirm
                 title="ยกเลิกออเดอร์"
                 description="คุณแน่ใจหรือไม่ที่จะยกเลิกออเดอร์นี้?"
-                icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
+                icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
                 onConfirm={() => handleCancelOrder(record.id)}
                 okText="ยกเลิก"
                 cancelText="ไม่"
@@ -290,18 +311,25 @@ export default function OrdersManagement() {
     },
   ];
 
-  const filteredOrders = orders?.data?.orders?.filter((order: any) => {
-    if (statusFilter !== 'all' && order.status !== statusFilter) {
-      return false;
-    }
-    return true;
-  }) || [];
+  const filteredOrders =
+    orders?.data?.orders?.filter((order: any) => {
+      if (statusFilter !== "all" && order.status !== statusFilter) {
+        return false;
+      }
+      return true;
+    }) || [];
 
   // Statistics
   const totalOrders = orders?.data?.orders?.length || 0;
-  const openOrders = orders?.data?.orders?.filter((order: any) => order.status === 'open')?.length || 0;
-  const closedOrders = orders?.data?.orders?.filter((order: any) => order.status === 'closed')?.length || 0;
-  const cancelledOrders = orders?.data?.orders?.filter((order: any) => order.status === 'cancelled')?.length || 0;
+  const openOrders =
+    orders?.data?.orders?.filter((order: any) => order.status === "open")
+      ?.length || 0;
+  const closedOrders =
+    orders?.data?.orders?.filter((order: any) => order.status === "closed")
+      ?.length || 0;
+  const cancelledOrders =
+    orders?.data?.orders?.filter((order: any) => order.status === "cancelled")
+      ?.length || 0;
 
   return (
     <div>
@@ -309,7 +337,7 @@ export default function OrdersManagement() {
         <Title level={2}>จัดการออเดอร์</Title>
         <Button
           icon={<ReloadOutlined />}
-          onClick={() => mutate('admin-orders')}
+          onClick={() => mutate("admin-orders")}
         >
           รีเฟรช
         </Button>
@@ -332,7 +360,7 @@ export default function OrdersManagement() {
               title="กำลังดำเนินการ"
               value={openOrders}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
@@ -342,7 +370,7 @@ export default function OrdersManagement() {
               title="เสร็จสิ้นแล้ว"
               value={closedOrders}
               prefix={<DollarOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              valueStyle={{ color: "#3f8600" }}
             />
           </Card>
         </Col>
@@ -352,7 +380,7 @@ export default function OrdersManagement() {
               title="ยกเลิกแล้ว"
               value={cancelledOrders}
               prefix={<StopOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              valueStyle={{ color: "#cf1322" }}
             />
           </Card>
         </Col>
@@ -434,21 +462,20 @@ export default function OrdersManagement() {
                 <strong>โต๊ะ:</strong> {selectedOrder.table_id}
               </Col>
               <Col span={12}>
-                <strong>สถานะ:</strong>{' '}
+                <strong>สถานะ:</strong>{" "}
                 <Tag color={getStatusColor(selectedOrder.status)}>
                   {getStatusText(selectedOrder.status)}
                 </Tag>
               </Col>
               <Col span={12}>
-                <strong>เวลาสั่ง:</strong>{' '}
-                {moment(selectedOrder.created_at).format('DD/MM/YYYY HH:mm')}
+                <strong>เวลาสั่ง:</strong>{" "}
+                {moment(selectedOrder.created_at).format("DD/MM/YYYY HH:mm")}
               </Col>
               <Col span={12}>
-                <strong>เวลาปิด:</strong>{' '}
-                {selectedOrder.closed_at 
-                  ? moment(selectedOrder.closed_at).format('DD/MM/YYYY HH:mm') 
-                  : '-'
-                }
+                <strong>เวลาปิด:</strong>{" "}
+                {selectedOrder.closed_at
+                  ? moment(selectedOrder.closed_at).format("DD/MM/YYYY HH:mm")
+                  : "-"}
               </Col>
             </Row>
 
@@ -461,7 +488,9 @@ export default function OrdersManagement() {
                 <List.Item>
                   <List.Item.Meta
                     title={item.menu_item?.name || `รายการ #${item.item_id}`}
-                    description={`จำนวน: ${item.quantity} | ราคาต่อหน่วย: ฿${item.unit_price?.toLocaleString()}`}
+                    description={`จำนวน: ${
+                      item.quantity
+                    } | ราคาต่อหน่วย: ฿${item.unit_price?.toLocaleString()}`}
                   />
                   <div className="text-right">
                     <strong>฿{item.subtotal?.toLocaleString()}</strong>
@@ -471,7 +500,7 @@ export default function OrdersManagement() {
             />
 
             <Divider />
-            
+
             <div className="text-right">
               <Title level={3}>
                 รวมทั้งสิ้น: ฿{selectedOrder.total?.toLocaleString() || 0}
@@ -494,9 +523,9 @@ export default function OrdersManagement() {
             key="payment"
             type="primary"
             icon={<CreditCardOutlined />}
-            disabled={selectedOrder?.status !== 'closed'}
+            disabled={selectedOrder?.status !== "closed"}
             onClick={() => {
-              paymentForm.setFieldValue('amount', orderTotal?.total);
+              paymentForm.setFieldValue("amount", orderTotal?.total);
               setIsPaymentDrawerOpen(true);
             }}
           >
@@ -527,7 +556,7 @@ export default function OrdersManagement() {
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="เวลาสั่ง" span={1}>
-                {moment(selectedOrder.created_at).format('DD/MM/YYYY HH:mm')}
+                {moment(selectedOrder.created_at).format("DD/MM/YYYY HH:mm")}
               </Descriptions.Item>
             </Descriptions>
 
@@ -539,7 +568,9 @@ export default function OrdersManagement() {
               renderItem={(item: any) => (
                 <List.Item className="flex justify-between">
                   <div>
-                    <Text strong>{item.menu_item?.name || `รายการ #${item.item_id}`}</Text>
+                    <Text strong>
+                      {item.menu_item?.name || `รายการ #${item.item_id}`}
+                    </Text>
                     <br />
                     <Text type="secondary">
                       {item.quantity} x ฿{item.unit_price?.toLocaleString()}
@@ -595,21 +626,23 @@ export default function OrdersManagement() {
           <Form.Item
             name="amount"
             label="จำนวนเงิน"
-            rules={[{ required: true, message: 'กรุณาระบุจำนวนเงิน' }]}
+            rules={[{ required: true, message: "กรุณาระบุจำนวนเงิน" }]}
           >
             <InputNumber
               className="w-full"
               placeholder="จำนวนเงิน"
               min={0}
-              formatter={value => `฿ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/฿\s?|(,*)/g, '')}
+              formatter={(value) =>
+                `฿ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value!.replace(/฿\s?|(,*)/g, "")}
             />
           </Form.Item>
 
           <Form.Item
             name="method"
             label="วิธีการชำระเงิน"
-            rules={[{ required: true, message: 'กรุณาเลือกวิธีการชำระเงิน' }]}
+            rules={[{ required: true, message: "กรุณาเลือกวิธีการชำระเงิน" }]}
           >
             <Radio.Group>
               <Space direction="vertical">
@@ -621,13 +654,18 @@ export default function OrdersManagement() {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" className="w-full" size="large">
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="w-full"
+              size="large"
+            >
               ยืนยันการชำระเงิน
             </Button>
           </Form.Item>
         </Form>
       </Drawer>
-        <EditOrderModal
+      <EditOrderModal
         open={isEditModalOpen}
         onCancel={() => {
           setIsEditModalOpen(false);

@@ -1,3 +1,4 @@
+// src/app/admin/tables/page.tsx
 "use client";
 
 import {
@@ -13,29 +14,27 @@ import {
   message,
   Popconfirm,
   Tag,
-  QRCode,
+  Switch,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  QrcodeOutlined,
-  PrinterOutlined,
+  PlayCircleOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { adminService } from "@/services/adminService";
-
+import { Table as TableType } from "@/types";
+import { useRouter } from "next/navigation";
 const { Title } = Typography;
 
 export default function TablesManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<any>(null);
-  const [selectedTable, setSelectedTable] = useState<any>(null);
   const [form] = Form.useForm();
-
-  const { data: tables , isLoading } = useSWR("admin-tables", () =>
+  const router = useRouter();
+  const { data: tables, isLoading } = useSWR("admin-tables", () =>
     adminService.getTables()
   );
 
@@ -83,9 +82,15 @@ export default function TablesManagement() {
     }
   };
 
-  const handleShowQR = (table: any) => {
-    setSelectedTable(table);
-    setIsQRModalOpen(true);
+  const handleCreateOrder = async (tableId: number) => {
+    try {
+      // เรียก API สร้าง order สำหรับโต๊ะนี้
+      // const order = await adminService.createOrder({ table_id: tableId });
+      message.success("เปิดโต๊ะและสร้างออเดอร์สำเร็จ");
+      mutate("admin-tables");
+    } catch (error) {
+      message.error("เกิดข้อผิดพลาดในการเปิดโต๊ะ");
+    }
   };
 
   const columns = [
@@ -113,61 +118,89 @@ export default function TablesManagement() {
     },
     {
       title: "สถานะ",
-      dataIndex: "is_active",
-      key: "is_active",
+      dataIndex: "is_available",
+      key: "is_available",
       render: (isActive: boolean) => (
         <Tag color={isActive ? "success" : "error"}>
-          {isActive ? "ใช้งานได้" : "ไม่ใช้งาน"}
+          {isActive ? "ใช้งานได้" : "ปิดใช้งาน"}
         </Tag>
       ),
     },
     {
-      title: "QR Code",
-      dataIndex: "qr_code",
-      key: "qr_code",
-      render: (qrCode: string, record: any) => (
-        <Button
-          size="small"
-          icon={<QrcodeOutlined />}
-          onClick={() => handleShowQR(record)}
-        >
-          ดู QR
-        </Button>
-      ),
+      title: "สถานะการใช้งาน",
+      key: "usage_status",
+      render: (record: TableType) => {
+        // ในอนาคตอาจเช็คจาก orders ที่เปิดอยู่
+        const hasOpenOrder = record.current_order?.order_id ? true : false;
+        return (
+          <Tag color={hasOpenOrder ? "warning" : "success"}>
+            {hasOpenOrder ? "มีลูกค้า" : "ว่าง"}
+          </Tag>
+        );
+      },
     },
     {
       title: "การดำเนินการ",
       key: "action",
-      width: 250,
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            type="primary"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            แก้ไข
-          </Button>
-          <Button
-            size="small"
-            icon={<QrcodeOutlined />}
-            onClick={() => handleShowQR(record)}
-          >
-            QR Code
-          </Button>
-          <Popconfirm
-            title="ต้องการลบโต๊ะนี้?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="ใช่"
-            cancelText="ไม่"
-          >
-            <Button danger size="small" icon={<DeleteOutlined />}>
-              ลบ
+      width: 300,
+      render: (_: any, record: TableType) => {
+        const hasOpenOrder = record.current_order?.order_id ? true : false;
+
+        return (
+          <Space>
+            <Button
+              type="primary"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            >
+              แก้ไข
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+
+            {record.is_available && !hasOpenOrder && (
+              <Button
+                type="default"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={() => handleCreateOrder(record.id)}
+                style={{
+                  backgroundColor: "#52c41a",
+                  borderColor: "#52c41a",
+                  color: "white",
+                }}
+              >
+                เปิดโต๊ะ
+              </Button>
+            )}
+            {record.current_order?.order_id && hasOpenOrder && (
+              <Button
+                type="default"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={() => router.push(`/admin/orders?order_id=${record.current_order?.order_id}`)}
+                style={{
+                  backgroundColor: "#faad14",
+                  borderColor: "#faad14",
+                  color: "white",
+                }}
+              >
+                จัดการออเดอร์
+              </Button>
+            )}
+            <Popconfirm
+              title="ต้องการลบโต๊ะนี้?"
+              description="การลบจะไม่สามารถกู้คืนได้"
+              onConfirm={() => handleDelete(record.id)}
+              okText="ใช่"
+              cancelText="ไม่"
+            >
+              <Button danger size="small" icon={<DeleteOutlined />}>
+                ลบ
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -185,7 +218,7 @@ export default function TablesManagement() {
           columns={columns}
           dataSource={tables?.data || []}
           loading={isLoading}
-          // rowKey="id"
+          rowKey="id"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -232,49 +265,18 @@ export default function TablesManagement() {
               placeholder="กรอกจำนวนที่นั่ง"
               style={{ width: "100%" }}
               min={1}
+              max={20}
             />
           </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* QR Code Modal */}
-      <Modal
-        title={`QR Code โต๊ะ ${selectedTable?.table_number}`}
-        open={isQRModalOpen}
-        onCancel={() => setIsQRModalOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setIsQRModalOpen(false)}>
-            ปิด
-          </Button>,
-          <Button
-            key="print"
-            type="primary"
-            icon={<PrinterOutlined />}
-            onClick={() => {
-              // Implement print functionality
-              window.print();
-            }}
+          <Form.Item
+            name="is_available"
+            label="สถานะการใช้งาน"
+            valuePropName="checked"
+            initialValue={true}
           >
-            พิมพ์ QR Code
-          </Button>,
-        ]}
-        width={400}
-      >
-        {selectedTable && (
-          <div className="text-center">
-            <div className="mb-4">
-              <Title level={3}>โต๊ะ {selectedTable.table_number}</Title>
-              <p>จำนวนที่นั่ง: {selectedTable.seating} ที่นั่ง</p>
-            </div>
-            <div className="flex justify-center mb-4">
-              <QRCode
-                value={selectedTable.qr_code || `table-${selectedTable.id}`}
-                size={200}
-              />
-            </div>
-            <p className="text-gray-500 text-sm">สแกน QR Code เพื่อสั่งอาหาร</p>
-          </div>
-        )}
+            <Switch checkedChildren="ใช้งาน" unCheckedChildren="ไม่ใช้งาน" />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

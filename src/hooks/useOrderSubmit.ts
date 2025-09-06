@@ -8,66 +8,71 @@ export const useOrderSubmit = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // แปลง CartItem เป็น API request format
-  const buildOrderRequest = useCallback((
-    orderId: number, 
-    cartItems: CartItem[]
-  ): ManageOrderItemListRequest => {
-    const items = cartItems.map(item => ({
-      menu_item_id: item.menu_item_id,
-      quantity: item.quantity,
-      action: 'add' as const,
-      options: item.selectedOptions?.map(opt => ({
-        option_id: opt.optionId,
-        option_val_id: opt.valueId,
-        action: 'add' as const,
-      })) || [],
-    }));
+  const buildOrderRequest = useCallback(
+    (orderId: number, cartItems: CartItem[]): ManageOrderItemListRequest => {
+      const items = cartItems.map((item) => ({
+        menu_item_id: item.menu_item_id,
+        quantity: item.quantity,
+        action: "add" as const,
+        options:
+          item.selectedOptions?.map((opt) => ({
+            option_id: opt.optionId,
+            option_val_id: opt.valueId,
+            action: "add" as const,
+          })) || [],
+      }));
 
-    return {
-      order_id: orderId,
-      items,
-    };
-  }, []);
+      return {
+        order_id: orderId,
+        items,
+      };
+    },
+    []
+  );
 
   // ส่งออเดอร์
-  const submitOrder = useCallback(async (
-    orderId: number,
-    cartItems: CartItem[]
-  ) => {
-    if (!orderId || cartItems.length === 0) {
-      message.warning("ข้อมูลออเดอร์ไม่ครบถ้วน");
-      return { success: false, data: null };
-    }
+  const submitOrder = useCallback(
+    async (order_uuid: string, cartItems: CartItem[]) => {
+      const orderId = await (
+        await customerService.getOrderIdFromQRCode(order_uuid)
+      ).data;
+      console.log("Resolved orderId:", orderId);
+      console.log("Cart items to submit:", order_uuid);
+      if (!orderId || cartItems.length === 0) {
+        message.warning("ข้อมูลออเดอร์ไม่ครบถ้วน");
+        return { success: false, data: null };
+      }
 
-    setIsSubmitting(true);
-    
-    try {
-      const request = buildOrderRequest(orderId, cartItems);
-      console.log("Submitting order:", request);
+      setIsSubmitting(true);
 
-      const response = await customerService.manageOrderItems(request);
-      
-      message.success("สั่งอาหารสำเร็จ!");
-      
-      return { 
-        success: true, 
-        data: response.data,
-        orderId: orderId 
-      };
-      
-    } catch (error: any) {
-      console.error("Failed to submit order:", error);
-      message.error(error.message || "เกิดข้อผิดพลาดในการส่งออเดอร์");
-      
-      return { 
-        success: false, 
-        data: null, 
-        error 
-      };
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [buildOrderRequest]);
+      try {
+        const request = buildOrderRequest(orderId, cartItems);
+        console.log("Submitting order:", request);
+
+        const response = await customerService.manageOrderItems(request);
+
+        message.success("สั่งอาหารสำเร็จ!");
+
+        return {
+          success: true,
+          data: response.data,
+          orderId: orderId,
+        };
+      } catch (error: any) {
+        console.error("Failed to submit order:", error);
+        message.error(error.message || "เกิดข้อผิดพลาดในการส่งออเดอร์");
+
+        return {
+          success: false,
+          data: null,
+          error,
+        };
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [buildOrderRequest]
+  );
 
   return {
     isSubmitting,

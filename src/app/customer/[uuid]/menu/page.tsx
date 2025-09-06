@@ -36,7 +36,7 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useMenu } from "@/hooks/useMenu";
 import { useCart } from "@/hooks/useCart";
 import { useOrderSubmit } from "@/hooks/useOrderSubmit";
@@ -661,6 +661,8 @@ const FloatingCartButton = React.memo(
 // Main Component
 export default function MenuPage() {
   const searchParams = useSearchParams();
+  const params = useParams();
+  const order_uuid = params?.uuid as string;
   const router = useRouter();
 
   // State
@@ -794,8 +796,8 @@ export default function MenuPage() {
     try {
       // Get order ID from QR scan or create new order
       // const orderId = await orderSubmit.getOrCreateOrderId();
-
-      const result = await orderSubmit.submitOrder(5, cart.items);
+      
+      const result = await orderSubmit.submitOrder(order_uuid, cart.items);
 
       if (result.success) {
         cart.clearCart();

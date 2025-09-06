@@ -85,10 +85,18 @@ export interface UpdateMenuItemRequest {
 export interface Table {
   id: number;
   table_number: number;
-  qr_code: string;
+  is_available: boolean;
   seating: number;
+  current_order: OrderTableDetails | null;
 }
 
+export interface OrderTableDetails {
+  order_id: number;
+  order_number: number;
+  status: string;
+  qr_code: string;
+  created_at: string;
+}
 export interface CreateTableRequest {
   table_number: number;
   seating: number;
@@ -182,13 +190,13 @@ export interface ManageOrderItemItemRequest {
   menu_item_id: number;
   quantity: number;
   options?: OrderItemOptionManageRequest[];
-  action?: 'add' | 'update' | 'delete';
+  action?: "add" | "update" | "delete";
 }
 
 export interface OrderItemOptionManageRequest {
   option_id: number;
   option_val_id: number;
-  action?: 'add' | 'update' | 'delete';
+  action?: "add" | "update" | "delete";
 }
 
 // Payment Types
@@ -204,7 +212,7 @@ export interface Payment {
 export interface ProcessPaymentRequest {
   order_id: number;
   amount: number;
-  method: 'cash' | 'credit_card' | 'wallet';
+  method: "cash" | "credit_card" | "wallet";
 }
 
 export interface PaymentListResponse {
@@ -213,8 +221,6 @@ export interface PaymentListResponse {
   limit: number;
   offset: number;
 }
-
-
 
 export interface OptionValue {
   id: number;
@@ -304,7 +310,7 @@ export interface OptionValue {
 export interface MenuOption {
   id: number;
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   isRequired: boolean;
   optionValues: OptionValue[];
 }
@@ -353,14 +359,14 @@ export interface CartItem {
 
 export interface CreateOptionRequest {
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   isRequired: boolean;
   values: CreateOptionValueRequest[];
 }
 
 export interface UpdateOptionRequest {
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   isRequired: boolean;
 }
 
@@ -392,7 +398,7 @@ export interface OptionValue {
 export interface OptionWithValues {
   id: number;
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   is_required: boolean;
   values: OptionValue[];
   created_at?: string;
@@ -401,7 +407,7 @@ export interface OptionWithValues {
 
 export interface CreateOptionWithValuesRequest {
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   is_required: boolean;
   values: CreateOptionValueRequest[];
 }
@@ -415,7 +421,7 @@ export interface CreateOptionValueRequest {
 
 export interface UpdateOptionWithValuesRequest {
   name: string;
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   is_required: boolean;
   values: UpdateOptionValueRequest2[];
 }
@@ -426,7 +432,7 @@ export interface UpdateOptionValueRequest2 {
   additional_price: number;
   is_default: boolean;
   display_order?: number;
-  action?: 'add' | 'update' | 'delete';
+  action?: "add" | "update" | "delete";
 }
 
 export interface MenuItemWithOptions {
@@ -509,7 +515,7 @@ export interface OrderTotalResponse {
 export interface ProcessPaymentRequest {
   order_id: number;
   amount: number;
-  method: 'cash' | 'credit_card' | 'wallet';
+  method: "cash" | "credit_card" | "wallet";
 }
 
 export interface OrderTotal {
@@ -570,4 +576,16 @@ export interface MenuItemOption {
   is_active: boolean;
   option?: MenuOption;
   values?: OptionValue[];
+}
+
+// src/types/index.ts - เพิ่ม interface
+export interface TableWithStatus extends Table {
+  has_open_order: boolean;
+  open_order?: Order;
+  customer_count?: number;
+}
+
+export interface TableStatusResponse {
+  has_open_order: boolean;
+  order?: Order;
 }

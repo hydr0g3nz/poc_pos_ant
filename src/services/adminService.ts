@@ -28,7 +28,9 @@ import {
   OrderItem,
   AddOrderItemRequest,
   UpdateOrderItemRequest,
-  ManageOrderItemListRequest
+  ManageOrderItemListRequest,
+  TableWithStatus,
+  AddOrderItemRequest as AddOrderItemRequestForTable,
 } from '@/types';
 
 export const adminService = {
@@ -348,4 +350,20 @@ export const adminService = {
   //   const response = await api.get(`/menu-item-options/item/${itemId}`);
   //   return response.data;
   // },
+    createOrderForTable: async (tableId: number): Promise<ApiResponse<Order>> => {
+    const response = await api.post('/orders', { table_id: tableId });
+    return response.data;
+  },
+
+  // เช็คสถานะโต๊ะว่ามี order เปิดอยู่หรือไม่
+  getTableStatus: async (tableId: number): Promise<ApiResponse<{ has_open_order: boolean; order?: Order }>> => {
+    const response = await api.get(`/tables/${tableId}/status`);
+    return response.data;
+  },
+
+  // รับรายการโต๊ะพร้อมสถานะการใช้งาน
+  getTablesWithStatus: async (): Promise<ApiResponse<TableWithStatus[]>> => {
+    const response = await api.get('/tables/with-status');
+    return response.data;
+  },
 };

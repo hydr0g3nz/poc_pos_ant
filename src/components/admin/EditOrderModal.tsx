@@ -1,17 +1,15 @@
-// สร้างไฟล์ src/components/admin/EditOrderModal.tsx
+// src/components/admin/EditOrderModal.tsx
 
 "use client";
 
 import {
   Modal,
   Form,
-  Select,
   InputNumber,
   Button,
   Space,
   List,
   Typography,
-  Divider,
   Card,
   Row,
   Col,
@@ -19,25 +17,25 @@ import {
   Popconfirm,
   message,
   Spin,
+  Empty,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
-  MinusOutlined,
   DeleteOutlined,
   ShoppingCartOutlined,
+  EditOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
-import { adminService } from "@/services/adminService";
+import { customerService } from "@/services/customerService";
 import {
-  EditOrderItem,
-  MenuItem,
-  MenuItemOption,
-  SelectedOrderOption,
   OrderDetailResponse,
+  ManageOrderItemListRequest,
+  ManageOrderItemItemRequest,
 } from "@/types";
-import Link from "next/link";
+
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 interface EditOrderModalProps {
   open: boolean;
@@ -46,150 +44,87 @@ interface EditOrderModalProps {
   order: OrderDetailResponse | null;
 }
 
+interface OrderItemForm {
+  items: {
+    order_item_id?: number;
+    menu_item_id: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    action?: "update" | "delete";
+  }[];
+}
+
 export default function EditOrderModal({
   open,
   onCancel,
   onSave,
   order,
 }: EditOrderModalProps) {
-  const [form] = Form.useForm();
-  const [orderItems, setOrderItems] = useState<EditOrderItem[]>([]);
-  const [availableMenuItems, setAvailableMenuItems] = useState<MenuItem[]>([]);
+  const [form] = Form.useForm<OrderItemForm>();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [orderItemsToDelete, setOrderItemsToDelete] = useState<number[]>([]);
 
   useEffect(() => {
-    if (open && order) {
-      loadData();
-    }
-  }, [open, order]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [menuItemsResponse] = await Promise.all([
-        adminService.getMenuItemsForOrder(),
-      ]);
-
-      setAvailableMenuItems(menuItemsResponse.data.items || []);
-
-      // Convert existing order items to editable format
-      const editableItems: EditOrderItem[] = (order.items || []).map(
-        (item: any) => ({
-          id: item.id,
+    if (open && order?.items) {
+      // Set form data from existing order items
+      const formData: OrderItemForm = {
+        items: order.items.map((item) => ({
+          order_item_id: item.id,
           menu_item_id: item.item_id,
-          name: item.menu_item?.name || item.name,
+          name: item.name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          subtotal: item.subtotal,
-          options: [], // TODO: Load existing options
-          isNew: false,
-          isModified: false,
-        })
-      );
-
-      setOrderItems(editableItems);
-    } catch (error) {
-      message.error("ไม่สามารถโหลดข้อมูลได้");
-    } finally {
-      setLoading(false);
+        })),
+      };
+      form.setFieldsValue(formData);
+      setOrderItemsToDelete([]);
     }
-  };
-
-  const addNewItem = (values: any) => {
-    const selectedMenuItem = availableMenuItems.find(
-      (item) => item.id === values.menu_item_id
-    );
-    if (!selectedMenuItem) return;
-
-    const newItem: EditOrderItem = {
-      menu_item_id: values.menu_item_id,
-      name: selectedMenuItem.name,
-      quantity: values.quantity,
-      unit_price: selectedMenuItem.price,
-      subtotal: selectedMenuItem.price * values.quantity,
-      options: [],
-      isNew: true,
-    };
-
-    setOrderItems((prev) => [...prev, newItem]);
-    form.resetFields();
-  };
-
-  const updateQuantity = (index: number, newQuantity: number) => {
-    if (newQuantity <= 0) return;
-
-    setOrderItems((prev) =>
-      prev.map((item, i) => {
-        if (i === index) {
-          const newSubtotal = item.unit_price * newQuantity;
-          return {
-            ...item,
-            quantity: newQuantity,
-            subtotal: newSubtotal,
-            isModified: !item.isNew,
-          };
-        }
-        return item;
-      })
-    );
-  };
-
-  const removeItem = (index: number) => {
-    setOrderItems((prev) => {
-      const item = prev[index];
-      if (item.isNew) {
-        // Remove new items completely
-        return prev.filter((_, i) => i !== index);
-      } else {
-        // Mark existing items for deletion
-        return prev.map((item, i) =>
-          i === index ? { ...item, toDelete: true } : item
-        );
-      }
-    });
-  };
-
-  const restoreItem = (index: number) => {
-    setOrderItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, toDelete: false } : item))
-    );
-  };
+  }, [open, order, form]);
 
   const handleSave = async () => {
-    setSaving(true);
     try {
-      const itemsToManage = orderItems
-        .filter((item) => !item.toDelete)
-        .map((item) => ({
-          order_item_id: item.isNew ? undefined : item.id,
-          menu_item_id: item.menu_item_id,
-          quantity: item.quantity,
-          options:
-            item.options?.map((opt) => ({
-              option_id: opt.option_id,
-              option_val_id: opt.value_id,
-            })) || [],
-          action: item.isNew ? "add" : item.isModified ? "update" : undefined,
-        }));
+      setSaving(true);
+      const values = await form.validateFields();
 
-      // Add items marked for deletion
-      const itemsToDelete = orderItems
-        .filter((item) => item.toDelete && !item.isNew)
-        .map((item) => ({
-          order_item_id: item.id,
-          menu_item_id: item.menu_item_id,
-          quantity: 0, // Quantity 0 means delete
-          action: "delete" as const,
-        }));
+      if (!order) return;
 
-      const allItems = [...itemsToManage, ...itemsToDelete];
+      // Prepare items for API
+      const itemsToManage: ManageOrderItemItemRequest[] = [];
 
-      if (allItems.length > 0) {
-        await adminService.manageOrderItems({
+      // Add updated items
+      values.items?.forEach((item) => {
+        if (!orderItemsToDelete.includes(item.order_item_id || 0)) {
+          itemsToManage.push({
+            order_item_id: item.order_item_id,
+            menu_item_id: item.menu_item_id,
+            quantity: item.quantity,
+            action: "update",
+          });
+        }
+      });
+
+      // Add deleted items
+      orderItemsToDelete.forEach((itemId) => {
+        const originalItem = order.items.find((item) => item.id === itemId);
+        if (originalItem) {
+          itemsToManage.push({
+            order_item_id: itemId,
+            menu_item_id: originalItem.item_id,
+            quantity: 0, // quantity 0 means delete
+            action: "delete",
+          });
+        }
+      });
+
+      if (itemsToManage.length > 0) {
+        const manageRequest: ManageOrderItemListRequest = {
           order_id: order.id,
-          items: allItems,
-        });
+          items: itemsToManage,
+        };
+
+        await customerService.manageOrderItems(manageRequest);
       }
 
       message.success("อัพเดทออเดอร์สำเร็จ");
@@ -201,18 +136,71 @@ export default function EditOrderModal({
     }
   };
 
-  const calculateTotal = () => {
-    return orderItems
-      .filter((item) => !item.toDelete)
-      .reduce((total, item) => total + item.subtotal, 0);
+  const handleDeleteItem = (index: number, itemId?: number) => {
+    if (itemId) {
+      setOrderItemsToDelete((prev) => [...prev, itemId]);
+    }
+
+    // Remove from form
+    const currentItems = form.getFieldValue("items") || [];
+    const newItems = currentItems.filter((_: any, i: number) => i !== index);
+    form.setFieldValue("items", newItems);
   };
 
-  const activeItems = orderItems.filter((item) => !item.toDelete);
-  const deletedItems = orderItems.filter((item) => item.toDelete);
+  const handleRestoreItem = (itemId: number) => {
+    setOrderItemsToDelete((prev) => prev.filter((id) => id !== itemId));
+
+    // Add back to form
+    const originalItem = order?.items.find((item) => item.id === itemId);
+    if (originalItem) {
+      const currentItems = form.getFieldValue("items") || [];
+      const newItems = [
+        ...currentItems,
+        {
+          order_item_id: originalItem.id,
+          menu_item_id: originalItem.item_id,
+          name: originalItem.name,
+          quantity: originalItem.quantity,
+          unit_price: originalItem.unit_price,
+        },
+      ];
+      form.setFieldValue("items", newItems);
+    }
+  };
+
+  const calculateTotal = () => {
+    const items = form.getFieldValue("items") || [];
+    return items
+      .filter((_: any, index: number) => {
+        const item = items[index];
+        return !orderItemsToDelete.includes(item?.order_item_id || 0);
+      })
+      .reduce((total: number, item: any) => {
+        return total + (item?.unit_price || 0) * (item?.quantity || 0);
+      }, 0);
+  };
+
+  const getMenuUrl = () => {
+    if (!order) return "#";
+    // สร้าง URL ไปหน้าเมนูลูกค้า - ใช้ order id หรือ qr_code ตามที่ API รองรับ
+    return `/customer/${order.qr_code}/menu`;
+  };
+
+  const deletedItems =
+    order?.items.filter((item) => orderItemsToDelete.includes(item.id)) || [];
 
   return (
     <Modal
-      title={`แก้ไขออเดอร์ #${order?.id} - โต๊ะ ${order?.table_id}`}
+      title={
+        <div className="flex items-center justify-between">
+          <span>
+            แก้ไขออเดอร์ #{order?.id} - โต๊ะ {order?.table_id}
+          </span>
+          <Tag color="blue">
+            สถานะ: {order?.status === "open" ? "เปิด" : "ปิด"}
+          </Tag>
+        </div>
+      }
       open={open}
       onCancel={onCancel}
       footer={[
@@ -224,26 +212,39 @@ export default function EditOrderModal({
           type="primary"
           loading={saving}
           onClick={handleSave}
-          disabled={orderItems.length === 0}
+          disabled={!form.getFieldValue("items")?.length}
         >
           บันทึกการเปลี่ยนแปลง
         </Button>,
       ]}
-      width={900}
+      width={800}
       style={{ top: 20 }}
     >
       <Spin spinning={loading}>
         <div className="space-y-4">
-          {/* Add New Item Form */}
-          <Card title="เพิ่มรายการใหม่" size="small">
-            <Link href={`/customer/${order?.uuid}/menu`}>
-              <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                เพิ่ม
-              </Button>
-            </Link>
+          {/* Add Menu Item Section */}
+          <Card title="เพิ่มรายการอาหาร" size="small">
+            <Alert
+              message="เพิ่มเมนูใหม่"
+              description="คลิกปุ่มด้านล่างเพื่อไปยังหน้าเมนูและเลือกรายการอาหารที่ต้องการเพิ่ม"
+              type="info"
+              showIcon
+              className="mb-3"
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              size="large"
+              onClick={() => {
+                window.open(getMenuUrl(), "_blank");
+              }}
+            >
+              เพิ่มเมนูอาหาร
+              <LinkOutlined />
+            </Button>
           </Card>
 
-          {/* Current Order Items */}
+          {/* Current Order Items Form */}
           <Card
             title={
               <div className="flex items-center justify-between">
@@ -255,99 +256,146 @@ export default function EditOrderModal({
             }
             size="small"
           >
-            {activeItems.length > 0 ? (
-              <List
-                dataSource={activeItems}
-                renderItem={(item, index) => (
-                  <List.Item
-                    actions={[
-                      <Button
-                        key="decrease"
-                        size="small"
-                        icon={<MinusOutlined />}
-                        onClick={() => updateQuantity(index, item.quantity - 1)}
-                        disabled={item.quantity <= 1}
-                      />,
-                      <InputNumber
-                        key="quantity"
-                        size="small"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(value) => updateQuantity(index, value || 1)}
-                        style={{ width: 70 }}
-                      />,
-                      <Button
-                        key="increase"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={() => updateQuantity(index, item.quantity + 1)}
-                      />,
-                      <Popconfirm
-                        key="delete"
-                        title="ลบรายการ"
-                        description="คุณแน่ใจหรือไม่ที่จะลบรายการนี้?"
-                        onConfirm={() => removeItem(index)}
-                        okText="ลบ"
-                        cancelText="ยกเลิก"
-                      >
-                        <Button size="small" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <div className="flex items-center gap-2">
-                          {item.name}
-                          {item.isNew && <Tag color="green">ใหม่</Tag>}
-                          {item.isModified && <Tag color="orange">แก้ไข</Tag>}
-                        </div>
-                      }
-                      description={
-                        <div>
-                          <Text type="secondary">
-                            ฿{item.unit_price.toLocaleString()} x{" "}
-                            {item.quantity}
-                          </Text>
-                          {item.options && item.options.length > 0 && (
-                            <div className="mt-1">
-                              {item.options.map((option, i) => (
-                                <Tag key={i}>
-                                  {option.option_name}: {option.value_name}
-                                  {option.additional_price > 0 &&
-                                    ` (+฿${option.additional_price})`}
-                                </Tag>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      }
-                    />
-                    <div className="text-right">
-                      <Text strong>฿{item.subtotal.toLocaleString()}</Text>
-                    </div>
-                  </List.Item>
+            <Form form={form} layout="vertical">
+              <Form.List name="items">
+                {(fields, { remove }) => (
+                  <>
+                    {fields.length > 0 ? (
+                      <List
+                        dataSource={fields}
+                        renderItem={(field, index) => {
+                          const item = form.getFieldValue([
+                            "items",
+                            field.name,
+                          ]);
+                          const isDeleted = orderItemsToDelete.includes(
+                            item?.order_item_id || 0
+                          );
+
+                          if (isDeleted) return null;
+
+                          return (
+                            <List.Item
+                              key={field.key}
+                              actions={[
+                                <Form.Item
+                                  key="quantity"
+                                  name={[field.name, "quantity"]}
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: "กรุณาระบุจำนวน",
+                                    },
+                                    {
+                                      min: 1,
+                                      type: "number",
+                                      message: "จำนวนต้องมากกว่า 0",
+                                    },
+                                  ]}
+                                  className="mb-0"
+                                >
+                                  <InputNumber
+                                    min={1}
+                                    placeholder="จำนวน"
+                                    style={{ width: 80 }}
+                                  />
+                                </Form.Item>,
+                                <Popconfirm
+                                  key="delete"
+                                  title="ลบรายการ"
+                                  description="คุณแน่ใจหรือไม่ที่จะลบรายการนี้?"
+                                  onConfirm={() =>
+                                    handleDeleteItem(
+                                      field.name,
+                                      item?.order_item_id
+                                    )
+                                  }
+                                  okText="ลบ"
+                                  cancelText="ยกเลิก"
+                                >
+                                  <Button
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                  />
+                                </Popconfirm>,
+                              ]}
+                            >
+                              <List.Item.Meta
+                                title={
+                                  <div className="flex items-center gap-2">
+                                    <Text strong>{item?.name}</Text>
+                                  </div>
+                                }
+                                description={
+                                  <Text type="secondary">
+                                    ราคา: ฿{item?.unit_price?.toLocaleString()}{" "}
+                                    ต่อชิ้น
+                                  </Text>
+                                }
+                              />
+                              <div className="text-right">
+                                <Text strong>
+                                  ฿
+                                  {(
+                                    (item?.unit_price || 0) *
+                                    (item?.quantity || 0)
+                                  ).toLocaleString()}
+                                </Text>
+                              </div>
+
+                              {/* Hidden fields */}
+                              <Form.Item
+                                name={[field.name, "order_item_id"]}
+                                hidden
+                              >
+                                <InputNumber />
+                              </Form.Item>
+                              <Form.Item
+                                name={[field.name, "menu_item_id"]}
+                                hidden
+                              >
+                                <InputNumber />
+                              </Form.Item>
+                              <Form.Item name={[field.name, "name"]} hidden>
+                                <InputNumber />
+                              </Form.Item>
+                              <Form.Item
+                                name={[field.name, "unit_price"]}
+                                hidden
+                              >
+                                <InputNumber />
+                              </Form.Item>
+                            </List.Item>
+                          );
+                        }}
+                      />
+                    ) : (
+                      <Empty
+                        image={
+                          <ShoppingCartOutlined className="text-4xl text-gray-400" />
+                        }
+                        description="ไม่มีรายการในออเดอร์"
+                      />
+                    )}
+                  </>
                 )}
-              />
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <ShoppingCartOutlined className="text-4xl mb-2" />
-                <div>ไม่มีรายการในออเดอร์</div>
-              </div>
-            )}
+              </Form.List>
+            </Form>
           </Card>
 
-          {/* Deleted Items */}
+          {/* Deleted Items Section */}
           {deletedItems.length > 0 && (
             <Card title="รายการที่จะลบ" size="small">
               <List
                 dataSource={deletedItems}
-                renderItem={(item, index) => (
+                renderItem={(item) => (
                   <List.Item
                     actions={[
                       <Button
                         key="restore"
                         size="small"
-                        onClick={() => restoreItem(orderItems.indexOf(item))}
+                        onClick={() => handleRestoreItem(item.id)}
                       >
                         คืนกลับ
                       </Button>,
@@ -369,11 +417,15 @@ export default function EditOrderModal({
           )}
 
           {/* Summary */}
-          <Divider />
-          <Row justify="end">
+          <Row justify="end" className="pt-4 border-t">
             <Col>
               <Space direction="vertical" align="end">
-                <Text>จำนวนรายการ: {activeItems.length} รายการ</Text>
+                <Text>
+                  จำนวนรายการ:{" "}
+                  {(form.getFieldValue("items") || []).length -
+                    orderItemsToDelete.length}{" "}
+                  รายการ
+                </Text>
                 <Title level={4} className="text-green-600 mb-0">
                   ยอดรวม: ฿{calculateTotal().toLocaleString()}
                 </Title>

@@ -255,6 +255,7 @@ export interface OrderDetailResponse {
   item_count: number;
   subtotal: number;
   discount?: number;
+  qr_code: string;
   tax?: number;
   service_charge?: number;
   total: number;

@@ -85,7 +85,7 @@ export default function TablesManagement() {
   const handleCreateOrder = async (tableId: number) => {
     try {
       // เรียก API สร้าง order สำหรับโต๊ะนี้
-      // const order = await adminService.createOrder({ table_id: tableId });
+      const order = await adminService.createOrderForTable(tableId);
       message.success("เปิดโต๊ะและสร้างออเดอร์สำเร็จ");
       mutate("admin-tables");
     } catch (error) {

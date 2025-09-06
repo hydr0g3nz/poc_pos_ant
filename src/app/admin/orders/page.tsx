@@ -22,6 +22,7 @@ import {
   Form,
   InputNumber,
   Radio,
+  QRCode as QrCode,
 } from "antd";
 import {
   EyeOutlined,
@@ -35,6 +36,7 @@ import {
   CreditCardOutlined,
   ExclamationCircleOutlined,
   EditOutlined,
+  QrcodeOutlined,
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
@@ -42,14 +44,17 @@ import { adminService } from "@/services/adminService";
 import moment from "moment";
 import EditOrderModal from "@/components/admin/EditOrderModal"; // เพิ่ม import
 import { useSearchParams } from "next/navigation";
+import { customerService } from "@/services/customerService";
+import { qrcodeLink } from "@/utils/utils";
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function OrdersManagement() {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("open");
   const [dateRange, setDateRange] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
   const [orderTotal, setOrderTotal] = useState<any>(null);
@@ -58,7 +63,7 @@ export default function OrdersManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const searchParams = useSearchParams();
-  const [orderId , setOrderId] = useState<number>(0);
+  const [orderId, setOrderId] = useState<number>(0);
   const { data: orders, isLoading } = useSWR("admin-orders", () =>
     adminService.getOrders(50, 0)
   );
@@ -75,7 +80,7 @@ export default function OrdersManagement() {
   }, [orderId]);
   const handleEditOrder = async (orderId: number) => {
     try {
-      const response = await adminService.getOrderWithItems(orderId);
+      const response = await customerService.getOrderDetail(orderId);
       setEditingOrder(response.data);
       setIsEditModalOpen(true);
     } catch (error) {
@@ -97,7 +102,10 @@ export default function OrdersManagement() {
       message.error("ไม่สามารถโหลดรายละเอียดออเดอร์ได้");
     }
   };
-
+  const handleOpenQrModal = (orderId: number) => {
+    setSelectedOrder(orders?.data?.orders.find((o: any) => o.id === orderId));
+    setIsQrModalOpen(true);
+  };
   const handleCheckBill = async (orderId: number) => {
     try {
       setLoadingOrderId(orderId);
@@ -174,13 +182,15 @@ export default function OrdersManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "open":
-        return "processing";
-      case "closed":
-        return "success";
+        return "blue";
+      case "ordered":
+        return "orange";
+      case "completed":
+        return "green";
       case "cancelled":
-        return "error";
+        return "red";
       default:
-        return "default";
+        return "gray";
     }
   };
 
@@ -188,7 +198,9 @@ export default function OrdersManagement() {
     switch (status) {
       case "open":
         return "กำลังดำเนินการ";
-      case "closed":
+      case "ordered":
+        return "สั่งแล้ว";
+      case "completed":
         return "เสร็จสิ้น";
       case "cancelled":
         return "ยกเลิก";
@@ -306,6 +318,13 @@ export default function OrdersManagement() {
           >
             พิมพ์
           </Button>
+          <Button
+            size="small"
+            icon={<QrcodeOutlined />}
+            onClick={() => handleOpenQrModal(record.id)}
+          >
+            QR Code
+          </Button>
         </Space>
       ),
     },
@@ -400,8 +419,9 @@ export default function OrdersManagement() {
             >
               <Select.Option value="all">ทั้งหมด</Select.Option>
               <Select.Option value="open">กำลังดำเนินการ</Select.Option>
-              <Select.Option value="closed">เสร็จสิ้น</Select.Option>
+              <Select.Option value="completed">เสร็จสิ้น</Select.Option>
               <Select.Option value="cancelled">ยกเลิก</Select.Option>
+              <Select.Option value="ordered">สั่งแล้ว</Select.Option>
             </Select>
           </Col>
           <Col>
@@ -665,6 +685,18 @@ export default function OrdersManagement() {
           </Form.Item>
         </Form>
       </Drawer>
+      {/* qr code modal */}
+      <Modal
+        title="QR Code สำหรับลูกค้า"
+        open={isQrModalOpen}
+        onCancel={() => setIsQrModalOpen(false)}
+        footer={null}
+      >
+        <div className="flex flex-col items-center">
+          <QrCode value={qrcodeLink(selectedOrder?.qr_code)} size={256} />
+          <Text className="mt-2">{qrcodeLink(selectedOrder?.qr_code)}</Text>
+        </div>
+      </Modal>
       <EditOrderModal
         open={isEditModalOpen}
         onCancel={() => {

@@ -263,3 +263,7 @@ export class MenuUtils {
     };
   }
 }
+
+export const qrcodeLink = (text: string) => {
+  return `${process.env.NEXT_PUBLIC_API_BASE_QR_URL}/customer/${text}/menu`;
+}

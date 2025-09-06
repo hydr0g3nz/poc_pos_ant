@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { Layout, Menu, Badge, Button, Drawer } from 'antd';
-import { 
-  MenuOutlined, 
-  ShoppingCartOutlined, 
-  HomeOutlined, 
+import { Layout, Menu, Badge, Button, Drawer } from "antd";
+import {
+  MenuOutlined,
+  ShoppingCartOutlined,
+  HomeOutlined,
   UnorderedListOutlined,
-  ArrowLeftOutlined 
-} from '@ant-design/icons';
-import { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
+import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 
 const { Header, Content } = Layout;
 
@@ -25,19 +25,19 @@ export default function CustomerLayout({
 
   const menuItems = [
     {
-      key: '/customer',
+      key: "/customer",
       icon: <HomeOutlined />,
-      label: 'หน้าหลัก',
+      label: "หน้าหลัก",
     },
     {
-      key: '/customer/menu',
+      key: "/customer/menu",
       icon: <MenuOutlined />,
-      label: 'เมนูอาหาร',
+      label: "เมนูอาหาร",
     },
     {
-      key: '/customer/orders',
+      key: "/customer/orders",
       icon: <UnorderedListOutlined />,
-      label: 'ออเดอร์ของฉัน',
+      label: "ออเดอร์ของฉัน",
     },
   ];
 
@@ -45,10 +45,10 @@ export default function CustomerLayout({
     <Layout className="min-h-screen">
       <Header className="bg-white shadow-sm px-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center">
-          <Button 
-            type="text" 
-            icon={<ArrowLeftOutlined />} 
-            onClick={() => router.push('/')}
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => router.push("/")}
             className="mr-4"
           />
           <Link href="/customer" className="text-xl font-bold text-orange-600">
@@ -61,7 +61,7 @@ export default function CustomerLayout({
           <Menu
             mode="horizontal"
             selectedKeys={[pathname]}
-            items={menuItems.map(item => ({
+            items={menuItems.map((item) => ({
               ...item,
               onClick: () => router.push(item.key),
             }))}
@@ -81,10 +81,10 @@ export default function CustomerLayout({
         {/* Cart Icon */}
         <div className="hidden md:block">
           <Badge count={0} showZero={false}>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               icon={<ShoppingCartOutlined />}
-              onClick={() => router.push('/customer/cart')}
+              onClick={() => router.push("/customer/orders")} // เปลี่ยนจาก /cart เป็น /orders
             >
               ตรวจสอบออเดอร์
             </Button>
@@ -103,7 +103,7 @@ export default function CustomerLayout({
         <Menu
           mode="vertical"
           selectedKeys={[pathname]}
-          items={menuItems.map(item => ({
+          items={menuItems.map((item) => ({
             ...item,
             onClick: () => {
               router.push(item.key);
@@ -114,9 +114,7 @@ export default function CustomerLayout({
         />
       </Drawer>
 
-      <Content className="bg-gray-50">
-        {children}
-      </Content>
+      <Content className="bg-gray-50">{children}</Content>
     </Layout>
   );
 }

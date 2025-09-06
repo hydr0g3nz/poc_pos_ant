@@ -141,3 +141,47 @@ body {
 .ant-notification-notice {
   border-radius: 8px;
 }
+
+/* src/app/globals.css (เพิ่มเติม) */
+
+.custom-tabs .ant-tabs-tab {
+  font-weight: 500;
+}
+
+.custom-tabs .ant-tabs-tab-active {
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 8px 8px 0 0;
+}
+
+/* Order card animations */
+.order-card {
+  transition: all 0.3s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Status tags */
+.ant-tag.status-tag {
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-weight: 500;
+}
+
+/* Timeline customization */
+.ant-timeline-item-content {
+  min-height: 48px;
+}
+
+/* Steps customization */
+.ant-steps-item-process .ant-steps-item-icon {
+  background: #ff6b35;
+  border-color: #ff6b35;
+}
+
+.ant-steps-item-finish .ant-steps-item-icon {
+  background: #52c41a;
+  border-color: #52c41a;
+}

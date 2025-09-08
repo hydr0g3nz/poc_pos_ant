@@ -52,7 +52,7 @@ export default function OrderDetailPage() {
     }
     fetchOrderId();
   }, [uuid]);
-  const order = orderDetail?.data;
+  const order = orderDetail?.data || null;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -330,7 +330,7 @@ export default function OrderDetailPage() {
               <Text>฿{order.subtotal?.toLocaleString()}</Text>
             </div>
 
-            {order.discount > 0 && (
+            { order.discount > 0 && (
               <div className="flex justify-between text-green-600">
                 <Text>ส่วนลด:</Text>
                 <Text>-฿{order.discount.toLocaleString()}</Text>

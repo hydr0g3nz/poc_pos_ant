@@ -168,7 +168,7 @@ export default function MenuManagement() {
         assigned_options: [] as AssignMenuItemOptionRequest[],
       };
       // จัดการ menu options
-      let menuOptions: AssignMenuItemOptionRequest[] = [];
+      const menuOptions: AssignMenuItemOptionRequest[] = [];
       if (
         selectedItem?.menu_option &&
         selectedItem.menu_option.length > 0 &&

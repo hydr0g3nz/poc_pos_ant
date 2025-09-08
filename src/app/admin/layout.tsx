@@ -20,10 +20,9 @@ import {
   BellOutlined,
   HomeOutlined,
 } from "@ant-design/icons";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
@@ -168,7 +167,9 @@ export default function AdminLayout({
           </Space>
         </Header>
 
-        <Content className="bg-gray-50 p-6">{children}</Content>
+        <Suspense>
+          <Content className="bg-gray-50 p-6">{children}</Content>
+        </Suspense>
       </Layout>
     </Layout>
   );

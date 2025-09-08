@@ -78,7 +78,7 @@ const SearchAndFilter = React.memo(
     const [form] = Form.useForm<MenuFilterForm>();
 
     const handleValuesChange = useCallback(
-      (_, allValues: MenuFilterForm) => {
+      (_ : unknown, allValues: MenuFilterForm) => {
         onFilterChange(allValues);
       },
       [onFilterChange]
@@ -338,7 +338,7 @@ const PriceCalculator = React.memo(
     form: any;
     selectedItem: MenuItem;
   }) => {
-    const watchedValues = Form.useWatch([], form);
+    const watchedValues = Form.useWatch<MenuOptionForm>([], form);
 
     const calculatedPrice = useMemo(() => {
       if (!watchedValues?.options || !selectedItem?.menu_option)
@@ -552,9 +552,9 @@ const CartItemComponent = React.memo(
                 +฿{optionsPrice.toLocaleString()}
               </div>
             )}
-            {item.specialNote && (
+            {item.special_instructions && (
               <div className="text-xs text-blue-600 mt-1">
-                หมายเหตุ: {item.specialNote}
+                หมายเหตุ: {item.special_instructions}
               </div>
             )}
           </div>

@@ -254,10 +254,10 @@ export interface OrderDetailResponse {
   items: OrderItemDetailResponse[];
   item_count: number;
   subtotal: number;
-  discount?: number;
+  discount: number;
   qr_code: string;
   tax?: number;
-  service_charge?: number;
+  service_charge: number;
   total: number;
   created_at: string;
   updated_at: string;
@@ -353,6 +353,7 @@ export interface CartItem {
   quantity: number;
   selectedOptions?: SelectedOption[];
   optionsText?: string; // เก็บข้อความ options ไว้
+  special_instructions?: string;
   notes?: string;
 }
 

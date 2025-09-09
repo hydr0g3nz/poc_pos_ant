@@ -173,6 +173,7 @@ export const adminService = {
 
   // Table APIs
   getTables: async (): Promise<ApiResponse<Table[]>> => {
+    console.log("base url", api.defaults.baseURL);
     const response = await api.get('/tables');
     return response.data;
   },

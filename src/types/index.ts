@@ -56,6 +56,7 @@ export interface MenuItem {
   is_active: boolean;
   is_recommended: boolean;
   display_order: number;
+  image_url: string;
   menu_option: MenuItemOption[];
 }
 

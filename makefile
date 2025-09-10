@@ -5,7 +5,7 @@ push:
 	gcloud builds submit --tag asia-southeast1-docker.pkg.dev/learn-441406/ecom-front/ecom-front:$(VERSION) .
 
 
-VERSION = 1.0.1
+VERSION = 1.0.2
 COMMIT_SHA ?= $(shell git rev-parse --short HEAD)
 REGISTRY = ghcr.io/hydr0g3nz
 IMAGE_NAME = pos_luna_front

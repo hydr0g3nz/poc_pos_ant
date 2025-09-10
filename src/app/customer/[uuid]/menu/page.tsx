@@ -228,129 +228,176 @@ const MobileOptionsModal = React.memo(
         placement="bottom"
         onClose={onClose}
         open={visible}
-        height="auto"
+        height="90vh" // เพิ่ม height ให้มากขึ้น
         closable={false}
         className="rounded-t-3xl"
+        styles={{
+          body: { padding: 0, height: "calc(90vh - 60px)" }, // กำหนด height ให้ body
+        }}
       >
-        {/* Close button */}
-        <div className="flex justify-end mb-2">
-          <Button
-            type="text"
-            icon={<CloseOutlined />}
-            onClick={onClose}
-            shape="circle"
-          />
-        </div>
+        <div className="h-full flex flex-col">
+          {/* Header Section - Fixed */}
+          <div className="flex-shrink-0 p-4 bg-white">
+            {/* Close button */}
+            <div className="flex justify-end mb-2">
+              <Button
+                type="text"
+                icon={<CloseOutlined />}
+                onClick={onClose}
+                shape="circle"
+              />
+            </div>
 
-        {/* Item Info */}
-        <div className="text-center mb-4">
-          <div className="text-6xl mb-3">🥤</div>
-          <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {selectedItem.description}
-          </p>
-        </div>
-
-        <Form form={form} layout="vertical">
-          {/* Options */}
-          {selectedItem.menu_option?.map((menuOption: any) => (
-            <Form.Item
-              key={menuOption.option?.id}
-              name={["options", menuOption.option?.id]}
-              label={
-                <span className="font-medium">
-                  {menuOption.option?.name}
-                  {menuOption.option?.isRequired && (
-                    <span className="text-red-500 ml-1">*</span>
-                  )}
-                </span>
-              }
-              rules={[
-                {
-                  required: menuOption.option?.isRequired,
-                  message: `กรุณาเลือก${menuOption.option?.name}`,
-                },
-              ]}
-            >
-              {menuOption.option?.type === "single" ? (
-                <Radio.Group className="w-full">
-                  <Space direction="vertical" className="w-full">
-                    {menuOption.option?.optionValues.map((value: any) => (
-                      <Radio key={value.id} value={value.id}>
-                        <div className="flex justify-between w-full">
-                          <span>{value.name}</span>
-                          {parseFloat(value.additionalPrice) > 0 && (
-                            <span className="text-green-600 ml-4">
-                              +฿{parseFloat(value.additionalPrice).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      </Radio>
-                    ))}
-                  </Space>
-                </Radio.Group>
-              ) : (
-                <Checkbox.Group className="w-full">
-                  <Space direction="vertical" className="w-full">
-                    {menuOption.option?.optionValues.map((value: any) => (
-                      <Checkbox key={value.id} value={value.id}>
-                        <div className="flex justify-between w-full">
-                          <span>{value.name}</span>
-                          {parseFloat(value.additionalPrice) > 0 && (
-                            <span className="text-green-600 ml-4">
-                              +฿{parseFloat(value.additionalPrice).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
-              )}
-            </Form.Item>
-          ))}
-
-          {/* Special Note */}
-          <Form.Item name="specialNote" label="หมายเหตุพิเศษ">
-            <Input.TextArea
-              rows={2}
-              placeholder="เช่น ไม่เผ็ด, ไม่ใส่น้ำแข็ง"
-            />
-          </Form.Item>
-        </Form>
-
-        {/* Quantity and Add to Cart */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t">
-          <div className="flex items-center gap-3">
-            <Button
-              shape="circle"
-              icon={<MinusOutlined />}
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            />
-            <span className="font-semibold text-lg w-8 text-center">
-              {quantity}
-            </span>
-            <Button
-              shape="circle"
-              icon={<PlusOutlined />}
-              onClick={() => setQuantity(quantity + 1)}
-            />
+            {/* Item Info */}
+            <div className="text-center">
+              <div className="text-6xl mb-3">🥤</div>
+              <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
+              <p className="text-gray-500 text-sm mt-1">
+                {selectedItem.description}
+              </p>
+            </div>
           </div>
 
-          <Button
-            type="primary"
-            size="large"
-            onClick={handleSubmit}
-            className="flex-1 ml-4 h-12 text-base font-medium"
-          >
-            เพิ่มลงตะกร้า ฿{calculatedPrice.toFixed(2)}
-          </Button>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <Form form={form} layout="vertical">
+              {/* Options */}
+              {selectedItem.menu_option?.map((menuOption: any) => (
+                <Form.Item
+                  key={menuOption.option?.id}
+                  name={["options", menuOption.option?.id]}
+                  label={
+                    <span className="font-medium">
+                      {menuOption.option?.name}
+                      {menuOption.option?.isRequired && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </span>
+                  }
+                  rules={[
+                    {
+                      required: menuOption.option?.isRequired,
+                      message: `กรุณาเลือก${menuOption.option?.name}`,
+                    },
+                  ]}
+                  className="mb-6" // เพิ่ม margin bottom
+                >
+                  {menuOption.option?.type === "single" ? (
+                    <Radio.Group className="w-full">
+                      <Space
+                        direction="vertical"
+                        className="w-full"
+                        size="middle"
+                      >
+                        {menuOption.option?.optionValues.map((value: any) => (
+                          <div
+                            key={value.id}
+                            className="border rounded-lg p-3 hover:bg-gray-50"
+                          >
+                            <Radio value={value.id} className="w-full">
+                              <div className="flex justify-between items-center w-full">
+                                <span className="flex-1">{value.name}</span>
+                                {parseFloat(value.additionalPrice) > 0 && (
+                                  <span className="text-green-600 font-medium">
+                                    +฿
+                                    {parseFloat(value.additionalPrice).toFixed(
+                                      2
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </Radio>
+                          </div>
+                        ))}
+                      </Space>
+                    </Radio.Group>
+                  ) : (
+                    <Checkbox.Group className="w-full">
+                      <Space
+                        direction="vertical"
+                        className="w-full"
+                        size="middle"
+                      >
+                        {menuOption.option?.optionValues.map((value: any) => (
+                          <div
+                            key={value.id}
+                            className="border rounded-lg p-3 hover:bg-gray-50"
+                          >
+                            <Checkbox value={value.id} className="w-full">
+                              <div className="flex justify-between items-center w-full">
+                                <span className="flex-1">{value.name}</span>
+                                {parseFloat(value.additionalPrice) > 0 && (
+                                  <span className="text-green-600 font-medium">
+                                    +฿
+                                    {parseFloat(value.additionalPrice).toFixed(
+                                      2
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </Checkbox>
+                          </div>
+                        ))}
+                      </Space>
+                    </Checkbox.Group>
+                  )}
+                </Form.Item>
+              ))}
+
+              {/* Special Note */}
+              <Form.Item
+                name="specialNote"
+                label="หมายเหตุพิเศษ"
+                className="mb-6"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="เช่น ไม่เผ็ด, ไม่ใส่น้ำแข็ง"
+                  className="resize-none"
+                />
+              </Form.Item>
+
+              {/* เพิ่ม spacing ที่ด้านล่างเพื่อไม่ให้ทับกับ footer */}
+              <div className="h-20"></div>
+            </Form>
+          </div>
+
+          {/* Footer Section - Fixed */}
+          <div className="flex-shrink-0 bg-white border-t p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  shape="circle"
+                  icon={<MinusOutlined />}
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  size="large"
+                />
+                <span className="font-semibold text-lg w-8 text-center">
+                  {quantity}
+                </span>
+                <Button
+                  shape="circle"
+                  icon={<PlusOutlined />}
+                  onClick={() => setQuantity(quantity + 1)}
+                  size="large"
+                />
+              </div>
+
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleSubmit}
+                className="flex-1 ml-4 h-12 text-base font-medium"
+              >
+                เพิ่มลงตะกร้า ฿{calculatedPrice.toFixed(2)}
+              </Button>
+            </div>
+          </div>
         </div>
       </Drawer>
     );
   }
 );
-
 // Simplified Cart Drawer
 const MobileCartDrawer = React.memo(
   ({

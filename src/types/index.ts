@@ -57,6 +57,7 @@ export interface MenuItem {
   is_recommended: boolean;
   display_order: number;
   image_url: string;
+  image_urls: string[];
   menu_option: MenuItemOption[];
 }
 
@@ -474,6 +475,7 @@ export interface CreateMenuItemWithOptionsRequest {
   is_recommended: boolean;
   display_order?: number;
   assigned_options?: AssignMenuItemOptionRequest[];
+  image_urls: string[];
 }
 
 export interface UpdateMenuItemWithOptionsRequest {

@@ -1,4 +1,3 @@
-// src/app/customer/[uuid]/menu/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -24,6 +23,7 @@ import {
   Form,
   Tabs,
   FloatButton,
+  Layout,
 } from "antd";
 import {
   SearchOutlined,
@@ -31,6 +31,9 @@ import {
   PlusOutlined,
   MinusOutlined,
   CloseOutlined,
+  ArrowLeftOutlined,
+  MenuOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
@@ -43,6 +46,7 @@ import { MenuItem, CartItem, SelectedOption } from "@/types";
 import Image from "next/image";
 
 const { Title, Text } = Typography;
+const { Header, Content } = Layout;
 
 // Constants
 const CONSTANTS = {
@@ -51,7 +55,47 @@ const CONSTANTS = {
   MIN_QUANTITY: 1,
 } as const;
 
-// Simplified Mobile Menu Card
+// Mobile Header Component
+const MobileHeader = React.memo(
+  ({
+    onCartClick,
+    cartCount,
+    onBackClick,
+  }: {
+    onCartClick: () => void;
+    cartCount: number;
+    onBackClick?: () => void;
+  }) => {
+    return (
+      <Header className="bg-white shadow-sm px-4 flex items-center justify-between sticky top-0 z-90 h-14">
+        <div className="flex items-center gap-3">
+          {onBackClick && (
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined className="!text-orange-500" />}
+              onClick={onBackClick}
+              size="small"
+            />
+          )}
+          <h1 className="text-lg font-bold text-orange-500 m-0">Luna HDY</h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Badge count={cartCount} showZero={false} size="small">
+            <Button
+              type="text"
+              icon={<ShoppingCartOutlined className="!text-orange-500" />}
+              onClick={onCartClick}
+              size="large"
+            />
+          </Badge>
+        </div>
+      </Header>
+    );
+  }
+);
+
+// Horizontal Mobile Menu Card สำหรับ List Layout
 const MobileMenuCard = React.memo(
   ({
     item,
@@ -66,11 +110,11 @@ const MobileMenuCard = React.memo(
 
     return (
       <div
-        className="bg-white rounded-lg shadow-sm overflow-hidden"
+        className="bg-white rounded-lg shadow-sm overflow-hidden flex cursor-pointer hover:shadow-md transition-shadow"
         onClick={handleClick}
       >
-        {/* Image Container */}
-        <div className="aspect-square bg-gradient-to-br from-yellow-600 to-orange-700 p-4">
+        {/* Image Container - Left Side */}
+        <div className="w-24 h-24 bg-gradient-to-br from-yellow-600 to-orange-700 p-2 flex-shrink-0">
           <div className="bg-white/90 rounded-lg h-full flex items-center justify-center">
             {item.image_url ? (
               <img
@@ -79,22 +123,35 @@ const MobileMenuCard = React.memo(
                 className="w-full h-full object-cover rounded-lg"
               />
             ) : (
-              <div className="text-center p-4">
-                <div className="text-6xl mb-2">🥤</div>
+              <div className="text-center">
+                <div className="text-2xl">🥤</div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-3">
-          <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
-            {item.name}
-          </h3>
+        {/* Content - Right Side */}
+        <div className="flex-1 p-3 flex flex-col justify-between">
+          <div>
+            <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+              {item.name}
+            </h3>
+            {item.description && (
+              <p className="text-xs text-gray-500 line-clamp-1 mb-2">
+                {item.description}
+              </p>
+            )}
+          </div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-gray-900">
+            <span className="text-lg font-semibold text-orange-600">
               ฿{item.price?.toFixed(2)}
             </span>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              className="rounded-full"
+            />
           </div>
         </div>
       </div>
@@ -117,13 +174,13 @@ const CategoryTabs = React.memo(
       return null;
     }
     return (
-      <div className="bg-white sticky top-0 z-10 border-b">
+      <div className="bg-white sticky top-14 z-40 border-b">
         <div className="overflow-x-auto scrollbar-hide">
           <div className="flex gap-2 p-3 min-w-max">
             <button
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 !activeCategory
-                  ? "bg-blue-500 text-white"
+                  ? "bg-orange-500 text-white"
                   : "bg-gray-100 text-gray-700"
               }`}
               onClick={() => onCategoryChange(undefined)}
@@ -135,7 +192,7 @@ const CategoryTabs = React.memo(
                 key={cat.id}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                   activeCategory === cat.id
-                    ? "bg-blue-500 text-white"
+                    ? "bg-orange-500 text-white"
                     : "bg-gray-100 text-gray-700"
                 }`}
                 onClick={() => onCategoryChange(cat.id)}
@@ -150,8 +207,7 @@ const CategoryTabs = React.memo(
   }
 );
 
-// Simplified Options Modal for Mobile
-// Simplified Options Modal for Mobile
+// Options Modal ยังคงเหมือนเดิม
 const MobileOptionsModal = React.memo(
   ({
     selectedItem,
@@ -167,14 +223,12 @@ const MobileOptionsModal = React.memo(
     const [form] = Form.useForm();
     const [quantity, setQuantity] = useState(1);
 
-    // ย้าย hooks ทั้งหมดขึ้นมาก่อน conditional return
     const watchedValues = Form.useWatch([], form);
 
     const calculatedPrice = useMemo(() => {
       if (!selectedItem) return 0;
       let price = selectedItem.price;
 
-      // Add options price calculation if needed
       if (watchedValues?.options && selectedItem.menu_option) {
         selectedItem.menu_option.forEach((menuOption: any) => {
           const optionId = menuOption.option?.id;
@@ -205,7 +259,6 @@ const MobileOptionsModal = React.memo(
       return price * quantity;
     }, [selectedItem, quantity, watchedValues]);
 
-    // Reset form when item changes
     useEffect(() => {
       if (visible && selectedItem) {
         form.resetFields();
@@ -219,7 +272,6 @@ const MobileOptionsModal = React.memo(
       });
     };
 
-    // ย้าย conditional return มาหลัง hooks ทั้งหมด
     if (!selectedItem) return null;
 
     return (
@@ -228,17 +280,15 @@ const MobileOptionsModal = React.memo(
         placement="bottom"
         onClose={onClose}
         open={visible}
-        height="90vh" // เพิ่ม height ให้มากขึ้น
+        height="90vh"
         closable={false}
         className="rounded-t-3xl"
         styles={{
-          body: { padding: 0, height: "calc(90vh - 60px)" }, // กำหนด height ให้ body
+          body: { padding: 0, height: "calc(90vh - 60px)" },
         }}
       >
         <div className="h-full flex flex-col">
-          {/* Header Section - Fixed */}
           <div className="flex-shrink-0 p-4 bg-white">
-            {/* Close button */}
             <div className="flex justify-end mb-2">
               <Button
                 type="text"
@@ -248,7 +298,6 @@ const MobileOptionsModal = React.memo(
               />
             </div>
 
-            {/* Item Info */}
             <div className="text-center">
               <div className="text-6xl mb-3">🥤</div>
               <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
@@ -258,10 +307,8 @@ const MobileOptionsModal = React.memo(
             </div>
           </div>
 
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
             <Form form={form} layout="vertical">
-              {/* Options */}
               {selectedItem.menu_option?.map((menuOption: any) => (
                 <Form.Item
                   key={menuOption.option?.id}
@@ -280,7 +327,7 @@ const MobileOptionsModal = React.memo(
                       message: `กรุณาเลือก${menuOption.option?.name}`,
                     },
                   ]}
-                  className="mb-6" // เพิ่ม margin bottom
+                  className="mb-6"
                 >
                   {menuOption.option?.type === "single" ? (
                     <Radio.Group className="w-full">
@@ -292,7 +339,7 @@ const MobileOptionsModal = React.memo(
                         {menuOption.option?.optionValues.map((value: any) => (
                           <div
                             key={value.id}
-                            className="border rounded-lg p-3 hover:bg-gray-50"
+                            className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
                           >
                             <Radio value={value.id} className="w-full">
                               <div className="flex justify-between items-center w-full">
@@ -321,7 +368,7 @@ const MobileOptionsModal = React.memo(
                         {menuOption.option?.optionValues.map((value: any) => (
                           <div
                             key={value.id}
-                            className="border rounded-lg p-3 hover:bg-gray-50"
+                            className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
                           >
                             <Checkbox value={value.id} className="w-full">
                               <div className="flex justify-between items-center w-full">
@@ -344,7 +391,6 @@ const MobileOptionsModal = React.memo(
                 </Form.Item>
               ))}
 
-              {/* Special Note */}
               <Form.Item
                 name="specialNote"
                 label="หมายเหตุพิเศษ"
@@ -357,12 +403,10 @@ const MobileOptionsModal = React.memo(
                 />
               </Form.Item>
 
-              {/* เพิ่ม spacing ที่ด้านล่างเพื่อไม่ให้ทับกับ footer */}
               <div className="h-20"></div>
             </Form>
           </div>
 
-          {/* Footer Section - Fixed */}
           <div className="flex-shrink-0 bg-white border-t p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -398,7 +442,8 @@ const MobileOptionsModal = React.memo(
     );
   }
 );
-// Simplified Cart Drawer
+
+// Cart Drawer ยังคงเหมือนเดิม
 const MobileCartDrawer = React.memo(
   ({
     visible,
@@ -535,7 +580,6 @@ export default function MenuPage() {
 
       const selectedOptions: SelectedOption[] = [];
 
-      // Process options
       if (values.options && selectedItem.menu_option) {
         selectedItem.menu_option.forEach((menuOption: any) => {
           const optionId = menuOption.option?.id;
@@ -617,80 +661,84 @@ export default function MenuPage() {
     [menu]
   );
 
+  const handleBackClick = useCallback(() => {
+    router.back();
+  }, [router]);
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Category Tabs */}
-      <CategoryTabs
-        categories={menu.categories}
-        activeCategory={activeCategory}
-        onCategoryChange={handleCategoryChange}
+    <Layout className="min-h-screen">
+      {/* Mobile Header */}
+      <MobileHeader
+        onCartClick={() => setIsCartVisible(true)}
+        cartCount={cart.summary.totalQuantity}
+        onBackClick={handleBackClick}
       />
 
-      {/* Menu Grid */}
-      <div className="p-3">
-        <Spin spinning={menu.isLoading}>
-          {menu.menuItems?.items && menu.menuItems.items.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {menu.menuItems.items.map((item: MenuItem) => (
-                <MobileMenuCard
-                  key={item.id}
-                  item={item}
-                  onItemClick={handleItemClick}
-                />
-              ))}
-            </div>
-          ) : (
-            <Empty description="ไม่พบเมนู" className="mt-20" />
-          )}
-        </Spin>
-      </div>
+      <Content className="bg-gray-100">
+        {/* Category Tabs */}
+        <CategoryTabs
+          categories={menu.categories}
+          activeCategory={activeCategory}
+          onCategoryChange={handleCategoryChange}
+        />
 
-      {/* Options Modal */}
-      <MobileOptionsModal
-        selectedItem={selectedItem}
-        visible={isModalVisible}
-        onClose={() => {
-          setIsModalVisible(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={handleOptionSubmit}
-      />
-
-      {/* Cart Drawer */}
-      <MobileCartDrawer
-        visible={isCartVisible}
-        onClose={() => setIsCartVisible(false)}
-        cart={cart}
-        onCheckout={handleCheckout}
-        isSubmitting={orderSubmit.isSubmitting}
-      />
-
-      {/* Floating Cart Button */}
-      <FloatButton
-        badge={{ count: cart.summary.totalQuantity }}
-        icon={<ShoppingCartOutlined />}
-        type="primary"
-        onClick={() => setIsCartVisible(true)}
-        style={{ bottom: 24, right: 24 }}
-      />
-
-      {/* Bottom Price Bar (Alternative) */}
-      {cart.summary.totalQuantity > 0 && (
-        <div
-          className="fixed bottom-0 left-0 right-0 bg-white border-t p-3 z-20"
-          onClick={() => setIsCartVisible(true)}
-        >
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Badge count={cart.summary.totalQuantity} />
-              <span className="font-medium">ตะกร้าสินค้า</span>
-            </div>
-            <span className="text-lg font-bold text-orange-600">
-              {cart.summary.formattedPrice}
-            </span>
-          </div>
+        {/* Menu List */}
+        <div className="p-4">
+          <Spin spinning={menu.isLoading}>
+            {menu.menuItems?.items && menu.menuItems.items.length > 0 ? (
+              <div className="space-y-3">
+                {menu.menuItems.items.map((item: MenuItem) => (
+                  <MobileMenuCard
+                    key={item.id}
+                    item={item}
+                    onItemClick={handleItemClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Empty description="ไม่พบเมนู" className="mt-20" />
+            )}
+          </Spin>
         </div>
-      )}
-    </div>
+
+        {/* Options Modal */}
+        <MobileOptionsModal
+          selectedItem={selectedItem}
+          visible={isModalVisible}
+          onClose={() => {
+            setIsModalVisible(false);
+            setSelectedItem(null);
+          }}
+          onSubmit={handleOptionSubmit}
+        />
+
+        {/* Cart Drawer */}
+        <MobileCartDrawer
+          visible={isCartVisible}
+          onClose={() => setIsCartVisible(false)}
+          cart={cart}
+          onCheckout={handleCheckout}
+          isSubmitting={orderSubmit.isSubmitting}
+        />
+
+        {/* Bottom Price Bar */}
+        {cart.summary.totalQuantity > 0 && (
+          <div
+            className="fixed bottom-0 left-0 right-0 bg-white border-t p-3 z-20 cursor-pointer"
+            onClick={() => setIsCartVisible(true)}
+          >
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Badge count={cart.summary.totalQuantity} />
+                <span className="font-medium">ตะกร้าสินค้า</span>
+              </div>
+              <span className="text-lg font-bold text-orange-600">
+                {cart.summary.formattedPrice}
+              </span>
+            </div>
+          </div>
+        )}
+      </Content>
+    </Layout>
   );
 }

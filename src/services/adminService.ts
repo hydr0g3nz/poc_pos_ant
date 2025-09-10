@@ -78,6 +78,7 @@ export const adminService = {
 
   getMenuItem: async (id: number): Promise<ApiResponse<MenuItem>> => {
     const response = await api.get(`/menu-items/${id}`);
+
     return response.data;
   },
 

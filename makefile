@@ -8,7 +8,7 @@ push:
 VERSION = 1.0.2
 COMMIT_SHA ?= $(shell git rev-parse --short HEAD)
 REGISTRY = ghcr.io/hydr0g3nz
-IMAGE_NAME = pos_luna_front
+IMAGE_NAME = poc_pos_ant
 # Manual version build
 version:
 	@echo "Current version: $(VERSION)"

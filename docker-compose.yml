@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ghcr.io/hydr0g3nz/poc_pos_restaurant:latest
+    container_name: pos_back
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      PORT: 8080
+      SERVER_HOST: 0.0.0.0
+      SERVER_READ_TIMEOUT: 10
+      SERVER_WRITE_TIMEOUT: 10
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: fxuser
+      DB_PASSWORD: fxpassword
+      DB_NAME: follower_exchange
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      LOG_LEVEL: debug
+
+    networks:
+      - fx_net
+
+  frontend:
+    image: ghcr.io/hydr0g3nz/poc_pos_ant:latest
+    container_name: pos_front
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: https://posapi.devpanejorn.com
+
+    networks:
+      - fx_net
+
+networks:
+  fx_net:
+    external: true
+    name: fx_net

@@ -466,16 +466,16 @@ export interface MenuItemOptionDetail {
 }
 
 export interface CreateMenuItemWithOptionsRequest {
-  category_id: number;
-  kitchen_station_id: number;
   name: string;
   description?: string;
   price: number;
+  category_id: number;
+  kitchen_station_id: number;
   is_active: boolean;
   is_recommended: boolean;
   display_order?: number;
   assigned_options?: AssignMenuItemOptionRequest[];
-  image_urls: string[];
+  image_urls: string;
 }
 
 export interface UpdateMenuItemWithOptionsRequest {
@@ -488,6 +488,7 @@ export interface UpdateMenuItemWithOptionsRequest {
   is_recommended: boolean;
   display_order?: number;
   assigned_options?: AssignMenuItemOptionRequest[];
+  image_urls: string;
 }
 
 export interface AssignMenuItemOptionRequest {
